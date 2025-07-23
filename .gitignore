@@ -1,2 +1,4 @@
+.env
 .specstory
 .venv
+__pycache__
