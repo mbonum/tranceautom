@@ -1,0 +1,39 @@
+NOTE,(più elementi),Unnamed: 2,DA SISTEMARE,Unnamed: 4,Unnamed: 5,Unnamed: 6,Unnamed: 7,Unnamed: 8,Unnamed: 9,Unnamed: 10,Unnamed: 11,Unnamed: 12,Unnamed: 13,Unnamed: 14,Unnamed: 15,Unnamed: 16,Unnamed: 17
+NOTE UFF.COMMERCIALE,All,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,
+Distinct Count di chiave articolo colore x Uff. PIANIF,N. Tranche,,,,,,,,,,,,,,,,
+CATEGORIE,1,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,AAP,Totale complessivo
+ACCESSORI COLLANT DONNA,,,,,,,,,,2.0,,,,,,,2
+AUTOREGGENTI DONNA,,,,,,4.0,,,,,,,,,,,4
+CALZINI BIMBO ANTISDR.,,2.0,2.0,,8.0,,,,,,,,,3.0,2.0,,17
+CALZINI BIMBO CORTO,9,10.0,7.0,10.0,,,3.0,,3.0,,,,,3.0,2.0,,47
+CALZINI BIMBO LUNGO,,,,,2.0,4.0,4.0,,,,,,,,,,10
+CALZINI DONNA ANTISDR.,,1.0,,,1.0,,,,,,2.0,,6.0,7.0,4.0,,21
+CALZINI DONNA CORTO,16,18.0,9.0,8.0,19.0,8.0,14.0,9.0,9.0,17.0,10.0,12.0,5.0,4.0,1.0,,159
+CALZINI DONNA DCZ,,,,2.0,,,5.0,,3.0,,,,,3.0,,,13
+CALZINI DONNA DLG,,,,1.0,,,,,,,,,,,,,1
+CALZINI DONNA LUNGO,,,,,4.0,7.0,3.0,7.0,4.0,,6.0,4.0,,,,,35
+CALZINI NEONATO ANTISDR.,,,,,,,,,,1.0,,,2.0,,,,3
+CALZINI UOMO ANTISDR.,,1.0,,1.0,,,,,,1.0,,2.0,,1.0,2.0,,8
+CALZINI UOMO CORTO,,4.0,3.0,2.0,8.0,3.0,6.0,3.0,3.0,,,,,3.0,1.0,,36
+CALZINI UOMO LUNGO,,,,1.0,,8.0,6.0,3.0,3.0,,,,,1.0,1.0,,23
+COLLANT BIMBA,,,14.0,,6.0,,,,3.0,7.0,4.0,,2.0,,,,36
+COLLANT DONNA,,11.0,6.0,7.0,8.0,6.0,9.0,9.0,5.0,6.0,2.0,11.0,5.0,4.0,,3,92
+CONT - AUTOREGGENTI DONNA,,,,,,,,,,,,,,,,4,4
+CONT - CALZINI BIMBO CORTO,2,,,,,,,,,,,,,,,4,6
+CONT - CALZINI BIMBO LUNGO,,,2.0,,,,,,,,,,,,,,2
+CONT - CALZINI DONNA CORTO,,14.0,9.0,1.0,,,,10.0,,16.0,4.0,,,,,3,57
+CONT - CALZINI DONNA LUNGO,,,,,3.0,,,1.0,,,4.0,,,,,,8
+CONT - CALZINI UOMO CORTO,,,,,,,,4.0,,,,,,,,6,10
+CONT - CALZINI UOMO CORTO SPORT/UNISEX,,,,,5.0,,2.0,,,,,,,,,2,9
+CONT - CALZINI UOMO LUNGO,,,,,,,,3.0,,,1.0,,,,,6,10
+CONT - COLLANT BIMBA,,,,,2.0,3.0,,,,,,,,,,,5
+CONT - COLLANT DONNA COPRENTI,,,,,1.0,,7.0,,,,,4.0,,,,3,15
+CONT - COLLANT DONNA VELATI,,,,,16.0,6.0,14.0,,,,,,,,,9,45
+CONT - GAMBALETTI DONNA,,,,,,,,,,1.0,,,,,,12,13
+CONT - PANTACOLLANT BIMBA,2,,,,,,,,2.0,,,,,,,,4
+CONT - PANTACOLLANT DONNA,5,4.0,3.0,7.0,10.0,,,2.0,9.0,,,,,2.0,,4,40
+PANTACOLLANT BIMBA,2,,1.0,,,2.0,,,,,2.0,,,,,,7
+PANTACOLLANT DONNA,5,,6.0,10.0,7.0,,8.0,9.0,2.0,3.0,5.0,3.0,4.0,1.0,3.0,,65
+TOP,3,,,,,,,,,,,,,,,,3
+Totale complessivo,44,65.0,62.0,50.0,100.0,51.0,81.0,60.0,46.0,54.0,40.0,36.0,24.0,32.0,16.0,56,810
