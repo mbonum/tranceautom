@@ -21,7 +21,7 @@ def home(request):
         else:
             try:
                 uploaded_file.seek(0)
-                df = pd.read_excel(uploaded_file, nrows=20, engine="openpyxl")
+                df = pd.read_excel(uploaded_file, sheet_name="PIANIFICAZIONE", engine="openpyxl")  # , nrows=20
                 preview = df.to_html(
                     classes="table table-striped table-bordered", index=False
                 )
