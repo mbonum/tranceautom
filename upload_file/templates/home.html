@@ -8,11 +8,28 @@
   table.table td {
     vertical-align: middle;
   }
+
+  .table-container {
+    width: 100%;
+    position: relative;
+  }
+
+  .top-scrollbar-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    height: 20px;
+    margin-bottom: 5px;
+  }
+
+  .top-scrollbar-content {
+    height: 1px;
+  }
 </style>
-<div class="container py-4">
+<div class="container pt-3 pb-4">
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-5">
-      <div class="card shadow p-4 mb-">
+      <div class="card shadow-sm p-4">
         <h2 class="mb-4 text-center">Upload file</h2>
         <form method="post" enctype="multipart/form-data">
           {% csrf_token %}
@@ -29,10 +46,42 @@
   </div>
 </div>
 {% if preview %}
-<div class="card shadow p-4 mx-4">
-  <h4 class="mb-3">Preview</h4>
-  {{ preview|safe }}
-</div>
-{% endif %}
+<div class="card shadow-sm px-4 py-3 mx-4 mb-4">
+  <h4 class="mb-1">Preview</h4>
+  <div class="table-container">
+    <!-- Top scrollbar -->
+    <div class="top-scrollbar-wrapper" id="topScrollbar">
+      <div class="top-scrollbar-content" id="topScrollbarContent"></div>
+    </div>
+    <div style="overflow-x: auto; width: 100%;" id="tableWrapper">
+      {{ preview|safe }}
+    </div>
+  </div>
 
-{% endblock %}
+  <script>
+    const topScrollbar = document.getElementById('topScrollbar');
+    const tableWrapper = document.getElementById('tableWrapper');
+    const topScrollbarContent = document.getElementById('topScrollbarContent');
+
+    function updateScrollbarWidth() {
+      const table = tableWrapper.querySelector('table');
+      if (table) {
+        topScrollbarContent.style.width = table.scrollWidth + 'px';
+      }
+    }
+
+    topScrollbar.addEventListener('scroll', function () {
+      tableWrapper.scrollLeft = topScrollbar.scrollLeft;
+    });
+
+    tableWrapper.addEventListener('scroll', function () {
+      topScrollbar.scrollLeft = tableWrapper.scrollLeft;
+    });
+
+    // Initialize after content loads
+    setTimeout(updateScrollbarWidth, 100);
+    window.addEventListener('resize', updateScrollbarWidth);
+  </script>
+  {% endif %}
+
+  {% endblock %}
