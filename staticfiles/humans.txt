@@ -1,0 +1,9 @@
+/* TEAM */
+Developer: Mirko
+Contact: hello@yourdomain.com
+
+/* THANKS */
+Libraries: Django, PostgreSQL, Bootstrap
+
+/* SITE */
+Last updated: 2025-07-23

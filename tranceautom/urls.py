@@ -18,10 +18,18 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path
+from upload_file.views import home
+
+
+def chrome_devtools_stub(request):
+    return JsonResponse({}, status=204)
 
 
 urlpatterns = [
+    path(".well-known/appspecific/com.chrome.devtools.json", chrome_devtools_stub),
+    path("", home, name="home"),
     path("admin/", admin.site.urls),
 ]
 
