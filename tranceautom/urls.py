@@ -1,26 +1,10 @@
-"""
-URL configuration for tranceautom project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/5.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path
-from upload_file.views import home
+from upload_file.views import home, download_csv, download_xml
+from django.views.static import serve
 
 
 def chrome_devtools_stub(request):
@@ -30,6 +14,13 @@ def chrome_devtools_stub(request):
 urlpatterns = [
     path(".well-known/appspecific/com.chrome.devtools.json", chrome_devtools_stub),
     path("", home, name="home"),
+    path("download-csv/", download_csv, name="download_csv"),
+    path("download-xml/", download_xml, name="download_xml"),
+    path(
+        "favicon.ico",
+        serve,
+        {"path": "favicon.ico", "document_root": settings.STATIC_ROOT},
+    ),
     path("admin/", admin.site.urls),
 ]
 
