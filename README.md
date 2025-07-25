@@ -1,6 +1,7 @@
 # Trance automation
 
 Django app
+
 1. Get excel file
 2. Convert to csv (?)
 3. Convert to xml
