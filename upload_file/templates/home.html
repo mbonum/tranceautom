@@ -83,7 +83,6 @@
       <div class="card">
         <div class="card-header">
           <h3 class="card-title mb-0">Trance automation</h3>
-          <!-- Excel to CSV Converter & CSV Validator -->
         </div>
         <div class="card-body">
           <form method="post" enctype="multipart/form-data">
@@ -111,61 +110,11 @@
               <strong>Edit Mode:</strong> Click on any cell below to edit its content. Your changes will be included
               in the downloaded XML file.
             </div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <!-- {% if file_type == "Excel" %}
-              <h5 class="mb-0">Excel to CSV Conversion Successful!</h5>
-              {% else %}
-              <h5 class="mb-0">CSV File Validated Successfully!</h5>
-              {% endif %} -->
+            <div class="d-flex flex-row-reverse align-items-center">
               <button id="download-xml-btn" class="btn btn-success">
                 <i class="bi bi-download"></i> Download XML
               </button>
             </div>
-
-            <!-- {% if validation_info %}
-            <div class="row mb-3">
-              <div class="col-md-4">
-                <div class="card bg-light">
-                  <div class="card-body text-center">
-                    <h6 class="card-title">Total Rows</h6>
-                    <h4 class="text-primary">{{ validation_info.rows }}</h4>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="card bg-light">
-                  <div class="card-body text-center">
-                    <h6 class="card-title">Total Columns</h6>
-                    <h4 class="text-success">{{ validation_info.columns }}</h4>
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="card bg-light">
-                  <div class="card-body text-center">
-                    <h6 class="card-title">File Type</h6>
-                    <h4 class="text-info">{{ file_type }}</h4>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {% if validation_info.column_names %}
-            <div class="mb-3">
-              <h6>Column Names:</h6>
-              <div class="d-flex flex-wrap gap-2">
-                {% for column in validation_info.column_names %}
-                <span class="badge bg-secondary">{{ column }}</span>
-                {% endfor %}
-              </div>
-            </div>
-            {% endif %}
-            {% endif %} -->
-
-            <!-- <div class="alert alert-info" role="alert">
-              <i class="bi bi-info-circle"></i>
-              Preview shows the first 20 rows. Edit the data and download as XML using the button above.
-            </div> -->
           </div>
 
           <div class="mt-4">
@@ -200,38 +149,6 @@
     </div>
   </div>
 </div>
-<!-- <div class="container pt-3 pb-4">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card shadow-sm p-4">
-        <h2 class="mb-4 text-center">Upload file</h2>
-        <form method="post" enctype="multipart/form-data">
-          {% csrf_token %}
-          {% if error %}
-          <div class="alert alert-danger" role="alert">{{ error }}</div>
-          {% endif %}
-          <div class="mb-3">
-            <input type="file" class="form-control" name="file" accept=".xlsx,.xls" />
-            <!- - .xlsx,.xls csv - ->
-          </div>
-          <button type="submit" class="btn btn-primary w-100">Upload</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-{% if preview %}
-<div class="card shadow-sm px-4 py-3 mx-4 mb-4">
-  <h4 class="mb-1">Preview</h4>
-  <div class="table-container">
-    <div class="top-scrollbar-wrapper" id="topScrollbar">
-      <div class="top-scrollbar-content" id="topScrollbarContent"></div>
-    </div>
-    <div style="overflow-x: auto; width: 100%;" id="tableWrapper">
-      {{ preview|safe }}
-    </div>
-  </div> -->
-
 <script>
   const topScrollbar = document.getElementById('topScrollbar');
   const tableWrapper = document.getElementById('tableWrapper');
