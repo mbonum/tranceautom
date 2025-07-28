@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import path
-from upload_file.views import home, download_csv, download_xml
+from upload_file.views import user_login, user_logout, user_register, home, download_csv, download_xml
 from django.views.static import serve
 
 
@@ -13,6 +13,9 @@ def chrome_devtools_stub(request):
 
 urlpatterns = [
     path(".well-known/appspecific/com.chrome.devtools.json", chrome_devtools_stub),
+    path("login/", user_login, name="login"),
+    path("logout/", user_logout, name="logout"),
+    path("register/", user_register, name="register"),
     path("", home, name="home"),
     path("download-csv/", download_csv, name="download_csv"),
     path("download-xml/", download_xml, name="download_xml"),

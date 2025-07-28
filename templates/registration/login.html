@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Login | {% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center min-vh-100">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-6 col-lg-5">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="pb-1"><i class="bi bi-file-earmark-spreadsheet"></i> Trance Automation</h2>
+          </div>
+
+          <div class="card-body">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <form method="post">
+              {% csrf_token %}
+              <div class="mb-3">
+                <label for="username" class="form-label">
+                  <i class="bi bi-person"></i> Username
+                </label>
+                <input type="text" class="form-control" id="username" name="username" required>
+              </div>
+
+              <div class="mb-3">
+                <label for="password" class="form-label">
+                  <i class="bi bi-lock"></i> Password
+                </label>
+                <input type="password" class="form-control" id="password" name="password" required>
+              </div>
+
+              <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-box-arrow-in-right"></i> Sign In
+              </button>
+            </form>
+
+            <!-- <a href="{% url 'register' %}" class="btn btn-outline-secondary w-100">
+            <i class="bi bi-person-plus"></i> Create Account
+          </a> -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
