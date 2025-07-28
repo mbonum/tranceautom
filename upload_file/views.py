@@ -1,10 +1,14 @@
-from django.shortcuts import render
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
+from django.shortcuts import render, redirect
 import csv
 import logging
 import io
 import pandas as pd
 from django.http import HttpResponse
-import traceback
+# import traceback
 # from io import BytesIO
 
 logger = logging.getLogger(__name__)
@@ -48,6 +52,68 @@ def validate_csv(file):
         return False, f"Error validating CSV: {str(e)}"
 
 
+def user_login(request):
+    """User login view"""
+    if request.user.is_authenticated:
+        return redirect("home")
+
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+
+        if username and password:
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(request, f"Welcome back, {user.username}!")
+
+                # Redirect to next page if specified, otherwise to home
+                next_page = request.GET.get("next", "home")
+                return redirect(next_page)
+            else:
+                messages.error(request, "Invalid username or password.")
+        else:
+            messages.error(request, "Please provide both username and password.")
+
+    return render(request, "registration/login.html")
+
+
+def user_logout(request):
+    """User logout view"""
+    username = request.user.username if request.user.is_authenticated else None
+    logout(request)
+    if username:
+        messages.success(request, f"Goodbye, {username}! You have been logged out.")
+    return redirect("login")
+
+
+def user_register(request):
+    """User registration view"""
+    if request.user.is_authenticated:
+        return redirect("home")
+
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            username = form.cleaned_data.get("username")
+            messages.success(
+                request, f"Account created for {username}! You can now log in."
+            )
+            return redirect("login")
+        else:
+            # Add form errors to messages
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+    else:
+        form = UserCreationForm()
+
+    return render(request, "registration/register.html", {"form": form})
+
+
+# Update your existing home view to require login
+@login_required
 def home(request):
     error = None
     preview = None
@@ -86,7 +152,7 @@ def home(request):
                         }
 
                         # Create preview (limit to first 20 rows for display)
-                        preview_df = df  # .head(20)
+                        preview_df = df.head(20)
 
                         # Store original data as JSON for editing
                         table_data = []
@@ -177,7 +243,6 @@ def home(request):
         except Exception as e:
             error = f"Could not process the file: {str(e)}"
             logger.error(f"Error processing file: {str(e)}")
-            logger.error(f"Traceback: {traceback.format_exc()}")
 
     return render(
         request,
@@ -194,62 +259,90 @@ def home(request):
     )
 
 
+# Update your existing download views to require login
+@login_required
 def download_xml(request):
     """View to handle XML download with edited data"""
     import json
-    from xml.etree.ElementTree import Element, SubElement, tostring
-    from xml.dom import minidom
 
-    if request.method == "POST":
-        # Get edited data from the request
-        edited_data = json.loads(request.POST.get("edited_data", "[]"))
-        original_filename = request.session.get("csv_filename", "converted_file.csv")
+    try:
+        if request.method == "POST":
+            # Get edited data from the request
+            edited_data_str = request.POST.get("edited_data", "[]")
+            edited_data = json.loads(edited_data_str)
+            original_filename = request.session.get(
+                "csv_filename", "converted_file.csv"
+            )
 
-        if not edited_data:
-            return HttpResponse("No data available for download.", status=400)
+            if not edited_data:
+                return HttpResponse("No data available for download.", status=400)
 
-        # Create XML structure
-        root = Element("data")
-        root.set("source_file", original_filename)
+            # Create XML manually to avoid import issues
+            xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+            xml_lines.append(f'<data source_file="{original_filename}">')
 
-        # Add metadata
-        metadata = SubElement(root, "metadata")
-        SubElement(metadata, "total_rows").text = str(len(edited_data))
-        SubElement(metadata, "total_columns").text = str(
-            len(edited_data[0]) if edited_data else 0
-        )
-        SubElement(metadata, "generated_at").text = str(pd.Timestamp.now())
+            # Add metadata
+            xml_lines.append("  <metadata>")
+            xml_lines.append(f"    <total_rows>{len(edited_data)}</total_rows>")
+            xml_lines.append(
+                f"    <total_columns>{len(edited_data[0]) if edited_data else 0}</total_columns>"
+            )
+            xml_lines.append(f"    <generated_at>{pd.Timestamp.now()}</generated_at>")
+            xml_lines.append(f"    <user>{request.user.username}</user>")
+            xml_lines.append("  </metadata>")
 
-        # Add data rows
-        data_section = SubElement(root, "records")
+            # Add data rows
+            xml_lines.append("  <records>")
 
-        for i, row in enumerate(edited_data):
-            record = SubElement(data_section, "record")
-            record.set("id", str(i + 1))
+            for i, row in enumerate(edited_data):
+                xml_lines.append(f'    <record id="{i + 1}">')
 
-            for j, cell_value in enumerate(row):
-                cell = SubElement(record, f"column_{j + 1}")
-                cell.text = str(cell_value) if cell_value is not None else ""
+                for j, cell_value in enumerate(row):
+                    # Escape XML special characters
+                    safe_value = (
+                        str(cell_value)
+                        .replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                        .replace('"', "&quot;")
+                        .replace("'", "&apos;")
+                        if cell_value
+                        else ""
+                    )
+                    xml_lines.append(
+                        f"      <column_{j + 1}>{safe_value}</column_{j + 1}>"
+                    )
 
-        # Pretty print XML
-        rough_string = tostring(root, "utf-8")
-        reparsed = minidom.parseString(rough_string)
-        pretty_xml = reparsed.toprettyxml(indent="  ")
+                xml_lines.append("    </record>")
 
-        # Generate filename
-        base_filename = (
-            original_filename.rsplit(".", 1)[0] if original_filename else "data"
-        )
-        xml_filename = f"{base_filename}_edited.xml"
+            xml_lines.append("  </records>")
+            xml_lines.append("</data>")
 
-        response = HttpResponse(pretty_xml, content_type="application/xml")
-        response["Content-Disposition"] = f'attachment; filename="{xml_filename}"'
+            # Join all lines
+            xml_content = "\n".join(xml_lines)
 
-        return response
+            # Generate filename
+            base_filename = (
+                original_filename.rsplit(".", 1)[0] if original_filename else "data"
+            )
+            xml_filename = f"{base_filename}_edited_by_{request.user.username}.xml"
 
-    return HttpResponse("Invalid request method.", status=405)
+            response = HttpResponse(xml_content, content_type="application/xml")
+            response["Content-Disposition"] = f'attachment; filename="{xml_filename}"'
+
+            return response
+
+        return HttpResponse("Invalid request method.", status=405)
+
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        return HttpResponse("Invalid data format.", status=400)
+    except Exception as e:
+        logger.error(f"Error generating XML: {e}")
+        return HttpResponse("Error generating XML file.", status=500)
 
 
+@login_required
 def download_csv(request):
     """View to handle CSV download (kept for backward compatibility)"""
     csv_data = request.session.get("csv_data")
@@ -262,28 +355,3 @@ def download_csv(request):
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     return response
-
-
-# def home(request):
-# error = None
-# preview = None
-# if request.method == "POST":
-#     uploaded_file = request.FILES.get("file")
-#     if not uploaded_file:
-#         error = "Please select a file."
-#     elif not (
-#         uploaded_file.name.endswith(".xlsx") or uploaded_file.name.endswith(".xls")
-#         # uploaded_file.name.endswith(".xlsx") or uploaded_file.name.endswith(".xls")
-#     ):
-#         error = "Only excel files (xlsx, xls) are allowed."
-#     else:
-#         try:
-#             uploaded_file.seek(0)
-#             df = pd.read_excel(uploaded_file, sheet_name="PIANIFICAZIONE", engine="openpyxl")  # , nrows=20
-#             preview = df.to_html(
-#                 classes="table table-striped table-bordered", index=False
-#             )
-#         except Exception as e:
-#             error = "Could not read the excel file."
-#             logger.exception("Error reading Excel file: %s", e)
-# return render(request, "home.html", {"error": error, "preview": preview})

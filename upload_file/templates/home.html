@@ -82,7 +82,7 @@
     <div class="col-md-8">
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title mb-0">Trance automation</h3>
+          <h3 class="card-title mb-0">Trance Automation</h3>
         </div>
         <div class="card-body">
           <form method="post" enctype="multipart/form-data">
@@ -107,7 +107,7 @@
           <div class="download-section">
             <div class="edit-info">
               <i class="bi bi-pencil-square"></i>
-              <strong>Edit Mode:</strong> Click on any cell below to edit its content. Your changes will be included
+              <strong>Edit values:</strong> Click on any cell below to edit its content. Your changes will be included
               in the downloaded XML file.
             </div>
             <div class="d-flex flex-row-reverse align-items-center">
@@ -121,6 +121,9 @@
             <h6>{% if file_type == "Excel" %}Editable Data Preview:{% else %}Editable CSV Content:{% endif %}</h6>
             <div class="preview-container">
               {% if table_headers and table_data %}
+              <!-- <div class="top-scrollbar-wrapper" id="topScrollbar">
+                <div class="top-scrollbar-content" id="topScrollbarContent"></div>
+              </div> -->
               <table id="editable-table" class="table table-striped table-bordered">
                 <thead>
                   <tr>
@@ -149,6 +152,38 @@
     </div>
   </div>
 </div>
+<!-- <div class="container pt-3 pb-4">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow-sm p-4">
+        <h2 class="mb-4 text-center">Upload file</h2>
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% if error %}
+          <div class="alert alert-danger" role="alert">{{ error }}</div>
+          {% endif %}
+          <div class="mb-3">
+            <input type="file" class="form-control" name="file" accept=".xlsx,.xls" />
+            <!- - .xlsx,.xls csv - ->
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Upload</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% if preview %}
+<div class="card shadow-sm px-4 py-3 mx-4 mb-4">
+  <h4 class="mb-1">Preview</h4>
+  <div class="table-container">
+    <div class="top-scrollbar-wrapper" id="topScrollbar">
+      <div class="top-scrollbar-content" id="topScrollbarContent"></div>
+    </div>
+    <div style="overflow-x: auto; width: 100%;" id="tableWrapper">
+      {{ preview|safe }}
+    </div>
+  </div> -->
+
 <script>
   const topScrollbar = document.getElementById('topScrollbar');
   const tableWrapper = document.getElementById('tableWrapper');
@@ -173,13 +208,21 @@
   setTimeout(updateScrollbarWidth, 100);
   window.addEventListener('resize', updateScrollbarWidth);
 
+  // Handle editable table and XML download
   document.addEventListener('DOMContentLoaded', function () {
     const downloadBtn = document.getElementById('download-xml-btn');
 
     if (downloadBtn) {
       downloadBtn.addEventListener('click', function () {
+        console.log('Download button clicked'); // Debug log
+
         // Collect all edited data from the table
         const table = document.getElementById('editable-table');
+        if (!table) {
+          alert('Table not found!');
+          return;
+        }
+
         const rows = table.querySelectorAll('tbody tr');
         const editedData = [];
 
@@ -192,18 +235,30 @@
           editedData.push(rowData);
         });
 
+        console.log('Collected data:', editedData); // Debug log
+
+        if (editedData.length === 0) {
+          alert('No data to download!');
+          return;
+        }
+
         // Create a form and submit the data
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '{% url "download_xml" %}';
+        form.action = '/download-xml/'; // Use absolute URL
         form.style.display = 'none';
 
         // Add CSRF token
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (!csrfTokenElement) {
+          alert('CSRF token not found!');
+          return;
+        }
+
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = 'csrfmiddlewaretoken';
-        csrfInput.value = csrfToken;
+        csrfInput.value = csrfTokenElement.value;
         form.appendChild(csrfInput);
 
         // Add edited data
@@ -213,14 +268,26 @@
         dataInput.value = JSON.stringify(editedData);
         form.appendChild(dataInput);
 
+        console.log('Submitting form with data:', JSON.stringify(editedData)); // Debug log
+
         document.body.appendChild(form);
         form.submit();
-        document.body.removeChild(form);
+
+        // Clean up
+        setTimeout(() => {
+          if (document.body.contains(form)) {
+            document.body.removeChild(form);
+          }
+        }, 1000);
       });
+    } else {
+      console.log('Download button not found'); // Debug log
     }
 
     // Add visual feedback for cell editing
     const editableCells = document.querySelectorAll('.editable-cell');
+    console.log('Found editable cells:', editableCells.length); // Debug log
+
     editableCells.forEach(cell => {
       cell.addEventListener('focus', function () {
         this.style.backgroundColor = '#f8f9ff';

@@ -15,6 +15,7 @@ import logging
 
 # import os
 from pathlib import Path
+from django.contrib.messages import constants as messages
 # import google.auth
 # from google.cloud import secretmanager
 
@@ -29,9 +30,6 @@ env = environ.Env(DEBUG=(bool, False))
 SECRET_KEY = env("SECRET_KEY")
 
 ALLOWED_HOSTS = ["127.0.0.1"]  # ['app-xyz.a.run.app', 'gcp-url']
-
-
-# Application definition
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -133,6 +131,16 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Login/Logout redirect URLs
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/login/"
+
+# Session configuration
+SESSION_COOKIE_AGE = 3600  # 1 hour
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_SAVE_EVERY_REQUEST = True
+
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
@@ -141,3 +149,11 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+
+MESSAGE_TAGS = {
+    messages.DEBUG: "secondary",
+    messages.INFO: "info",
+    messages.SUCCESS: "success",
+    messages.WARNING: "warning",
+    messages.ERROR: "danger",
+}
