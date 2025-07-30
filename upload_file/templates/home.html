@@ -79,10 +79,10 @@
 </style>
 <div class="container mt-5">
   <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-md-6 mb-3">
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title mb-0">Trance Automation</h3>
+          <h3 class="card-title mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Trance Automation</h3>
         </div>
         <div class="card-body">
           <form method="post" enctype="multipart/form-data">
@@ -102,8 +102,13 @@
               <i class="bi bi-upload"></i> Upload & Process File
             </button>
           </form>
-
-          {% if preview %}
+        </div>
+      </div>
+    </div>
+    {% if preview %}
+    <div class="col-md-10">
+      <div class="card">
+        <div class="card-body">
           <div class="download-section">
             <div class="edit-info">
               <i class="bi bi-pencil-square"></i>
@@ -117,40 +122,39 @@
             </div>
           </div>
 
-          <div class="mt-4">
-            <h6>{% if file_type == "Excel" %}Editable Data Preview:{% else %}Editable CSV Content:{% endif %}</h6>
-            <div class="preview-container">
-              {% if table_headers and table_data %}
-              <!-- <div class="top-scrollbar-wrapper" id="topScrollbar">
-                <div class="top-scrollbar-content" id="topScrollbarContent"></div>
-              </div> -->
-              <table id="editable-table" class="table table-striped table-bordered">
-                <thead>
-                  <tr>
-                    {% for header in table_headers %}
-                    <th class="table-header">{{ header }}</th>
-                    {% endfor %}
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for row in table_data %}
-                  <tr>
-                    {% for cell in row %}
-                    <td class="editable-cell" contenteditable="true" data-row="{{ forloop.parentloop.counter0 }}"
-                      data-col="{{ forloop.counter0 }}">{{ cell|default:"" }}</td>
-                    {% endfor %}
-                  </tr>
+          <h6>{% if file_type == "Excel" %}Editable Data Preview:{% else %}Editable CSV Content:{% endif %}</h6>
+          <div class="preview-container">
+            {% if table_headers and table_data %}
+            <!-- <div class="top-scrollbar-wrapper" id="topScrollbar">
+                  <div class="top-scrollbar-content" id="topScrollbarContent"></div>
+                </div> -->
+            <table id="editable-table" class="table table-striped table-bordered">
+              <thead>
+                <tr>
+                  {% for header in table_headers %}
+                  <th class="table-header">{{ header }}</th>
                   {% endfor %}
-                </tbody>
-              </table>
-              {% endif %}
-            </div>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in table_data %}
+                <tr>
+                  {% for cell in row %}
+                  <td class="editable-cell" contenteditable="true" data-row="{{ forloop.parentloop.counter0 }}"
+                    data-col="{{ forloop.counter0 }}">{{ cell|default:"" }}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% endif %}
           </div>
-          {% endif %}
         </div>
       </div>
     </div>
+    {% endif %}
   </div>
+</div>
 </div>
 <!-- <div class="container pt-3 pb-4">
   <div class="row justify-content-center">
