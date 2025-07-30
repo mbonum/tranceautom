@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "upload_file",
-    "preview_xml",
+    # "preview_xml",
 ]
 
 MIDDLEWARE = [

@@ -7,7 +7,7 @@ import csv
 import logging
 import io
 import pandas as pd
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 # from django.views.decorators.csrf import csrf_exempt
 # from django.views.decorators.http import require_http_methods
 # import openpyxl
@@ -155,22 +155,12 @@ def home(request):
                             "column_names": list(df.columns),
                         }
 
-                        # Create preview (limit to first 20 rows for display)
-                        preview_df = df.head(20)
+                        # Create preview
+                        preview_df = df
 
                         # Store original data as JSON for editing
-                        table_data = []
                         table_headers = preview_df.columns.tolist()
-
-                        # Convert data to strings to avoid JSON serialization issues
-                        for _, row in preview_df.iterrows():
-                            row_data = []
-                            for value in row.values:
-                                if pd.isna(value):
-                                    row_data.append("")
-                                else:
-                                    row_data.append(str(value))
-                            table_data.append(row_data)
+                        table_data = preview_df.fillna("").astype(str).values.tolist()
 
                         # Store in session for XML generation
                         request.session["table_data"] = table_data
@@ -194,55 +184,92 @@ def home(request):
                     # Handle Excel file
                     file_type = "Excel"
                     uploaded_file.seek(0)
-                    df = pd.read_excel(
-                        uploaded_file, sheet_name="PIANIFICAZIONE", engine="openpyxl"
-                    )
 
-                    # Convert to CSV
-                    csv_buffer = io.StringIO()
-                    df.to_csv(csv_buffer, index=False)
-                    csv_data = csv_buffer.getvalue()
+                    # Use ExcelFile to inspect sheets first
+                    xls = pd.ExcelFile(uploaded_file)
 
-                    # Generate filename for download
-                    base_filename = uploaded_file.name.rsplit(".", 1)[0]
-                    filename = f"{base_filename}_PIANIFICAZIONE.csv"
+                    sheet_to_find = "PIANIFICAZIONE"
+                    actual_sheet_name = None
+                    # Case-insensitive search for the sheet
+                    for s in xls.sheet_names:
+                        if s.lower() == sheet_to_find.lower():
+                            actual_sheet_name = s
+                            break
 
-                    validation_info = {
-                        "rows": len(df),
-                        "columns": len(df.columns),
-                        "column_names": list(df.columns),
-                    }
+                    if not actual_sheet_name:
+                        error = f"The Excel file does not contain a sheet named '{sheet_to_find}'."
+                    else:
+                        # Read the sheet without a header to find the real header row
+                        df_raw = pd.read_excel(
+                            xls, sheet_name=actual_sheet_name, header=None
+                        )
 
-                    # Create preview (limit to first 20 rows for display)
-                    preview_df = df  # .head(20)
+                        # Find the real header row based on a keyword
+                        header_keyword = "chiave articolo colore"
+                        header_row_index = -1
+                        for i, row in df_raw.iterrows():
+                            row_str = " ".join(
+                                str(x) for x in row.values if pd.notna(x)
+                            ).lower()
+                            if header_keyword in row_str:
+                                header_row_index = i
+                                break
 
-                    # Store original data as JSON for editing
-                    table_data = []
-                    table_headers = preview_df.columns.tolist()
+                        if header_row_index == -1:
+                            error = f"Could not find the header row containing '{header_keyword}' in sheet '{actual_sheet_name}'."
+                        else:
+                            # Set the found row as the new header and slice the data
+                            new_header = df_raw.iloc[header_row_index]
+                            df = df_raw[header_row_index + 1 :].copy()
+                            df.columns = new_header
 
-                    # Convert data to strings to avoid JSON serialization issues
-                    for _, row in preview_df.iterrows():
-                        row_data = []
-                        for value in row.values:
-                            if pd.isna(value):
-                                row_data.append("")
-                            else:
-                                row_data.append(str(value))
-                        table_data.append(row_data)
+                            # --- Data Cleaning ---
+                            # 1. Drop columns that are completely empty
+                            df.dropna(axis=1, how="all", inplace=True)
 
-                    # Store in session for XML generation
-                    request.session["table_data"] = table_data
-                    request.session["table_headers"] = table_headers
+                            # 2. Drop rows that are completely empty
+                            df.dropna(axis=0, how="all", inplace=True)
 
-                    preview = preview_df.to_html(
-                        classes="table table-striped table-bordered",
-                        index=False,
-                        table_id="csv-preview",
-                    )
+                            # 3. Drop rows that are likely section headers (empty first column)
+                            if not df.empty:
+                                df.dropna(subset=[df.columns[0]], inplace=True)
 
-                    # Store CSV data in session for download
-                    request.session["csv_data"] = csv_data
-                    request.session["csv_filename"] = filename
+                            # 4. Reset index after dropping rows
+                            df.reset_index(drop=True, inplace=True)
+
+                            # 5. Fill any remaining NaN values with empty strings
+                            df.fillna("", inplace=True)
+
+                            # --- Continue with processing the cleaned df ---
+                            csv_buffer = io.StringIO()
+                            df.to_csv(csv_buffer, index=False)
+                            csv_data = csv_buffer.getvalue()
+
+                            base_filename = uploaded_file.name.rsplit(".", 1)[0]
+                            filename = f"{base_filename}_{actual_sheet_name}.csv"
+
+                            validation_info = {
+                                "rows": len(df),
+                                "columns": len(df.columns),
+                                "column_names": list(df.columns),
+                            }
+
+                            preview_df = df
+
+                            table_headers = preview_df.columns.tolist()
+                            table_data = preview_df.astype(str).values.tolist()
+
+                            request.session["table_data"] = table_data
+                            request.session["table_headers"] = table_headers
+
+                            preview = preview_df.to_html(
+                                classes="table table-striped table-bordered",
+                                index=False,
+                                table_id="csv-preview",
+                            )
+
+                            request.session["csv_data"] = csv_data
+                            request.session["csv_filename"] = filename
 
         except Exception as e:
             error = f"Could not process the file: {str(e)}"
@@ -346,250 +373,16 @@ def download_xml(request):
         return HttpResponse("Error generating XML file.", status=500)
 
 
-@login_required
-def download_csv(request):
-    """View to handle CSV download (kept for backward compatibility)"""
-    csv_data = request.session.get("csv_data")
-    filename = request.session.get("csv_filename", "converted_file.csv")
+# @login_required
+# def download_csv(request):
+#     """View to handle CSV download (kept for backward compatibility)"""
+#     csv_data = request.session.get("csv_data")
+#     filename = request.session.get("csv_filename", "converted_file.csv")
 
-    if not csv_data:
-        return HttpResponse("No CSV data available for download.", status=400)
+#     if not csv_data:
+#         return HttpResponse("No CSV data available for download.", status=400)
 
-    response = HttpResponse(csv_data, content_type="text/csv")
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+#     response = HttpResponse(csv_data, content_type="text/csv")
+#     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
-    return response
-
-
-def process_excel_to_csv(request):
-    """
-    View to handle Excel file upload and processing
-    """
-    if request.method == "GET":
-        return render(request, "upload_form.html")
-
-    elif request.method == "POST":
-        if "excel_file" not in request.FILES:
-            return JsonResponse({"error": "No file uploaded"}, status=400)
-
-        excel_file = request.FILES["excel_file"]
-
-        try:
-            # Process the Excel file
-            csv_data = process_excel_sheets(excel_file)
-
-            if not csv_data:
-                return JsonResponse(
-                    {"error": "No sheets found with required columns"}, status=400
-                )
-
-            # Create HTTP response with CSV data
-            response = HttpResponse(csv_data, content_type="text/csv")
-            response["Content-Disposition"] = (
-                'attachment; filename="processed_data.csv"'
-            )
-            return response
-
-        except Exception as e:
-            return JsonResponse(
-                {"error": f"Error processing file: {str(e)}"}, status=500
-            )
-
-
-def process_excel_sheets(excel_file):
-    """
-    Process Excel file and return CSV data for sheets with required columns
-    """
-    required_columns = ["Chiave articolo", "Merceologia", "Tranche", "Data inizio"]
-
-    try:
-        # Read all sheets from Excel file
-        excel_data = pd.read_excel(excel_file, sheet_name=None, engine="openpyxl")
-
-        processed_data = []
-
-        for sheet_name, df in excel_data.items():
-            # Check if sheet has all required columns
-            if has_required_columns(df, required_columns):
-                # Process the sheet and convert to desired format
-                formatted_rows = format_sheet_data(df, required_columns)
-                processed_data.extend(formatted_rows)
-
-        if not processed_data:
-            return None
-
-        # Convert to CSV string
-        output = io.StringIO()
-        writer = csv.writer(output)
-
-        # Write header (optional - remove if not needed)
-        # writer.writerow(['Formatted_Data'])
-
-        # Write data rows
-        for row in processed_data:
-            writer.writerow([row])
-
-        csv_content = output.getvalue()
-        output.close()
-
-        return csv_content
-
-    except Exception as e:
-        raise Exception(f"Error reading Excel file: {str(e)}")
-
-
-def has_required_columns(df, required_columns):
-    """
-    Check if dataframe has all required columns
-    """
-    df_columns = [col.strip() for col in df.columns.astype(str)]
-    return all(req_col in df_columns for req_col in required_columns)
-
-
-def format_sheet_data(df, required_columns):
-    """
-    Format sheet data according to the specified string format
-    Based on your example: 0SN1796039EXS,1796-039E,M Slip Normale D C,AAP,25MD,0SN1796  039EXS,0SN1796,039E,XS,AAP,2025-06-12
-
-    This function needs to be customized based on your actual data structure
-    and how you want to map the columns to the output format.
-    """
-    formatted_rows = []
-
-    # Clean column names
-    df.columns = [col.strip() for col in df.columns.astype(str)]
-
-    for index, row in df.iterrows():
-        try:
-            # Extract required column values
-            chiave_articolo = (
-                str(row["Chiave articolo"]).strip()
-                if pd.notna(row["Chiave articolo"])
-                else ""
-            )
-            merceologia = (
-                str(row["Merceologia"]).strip() if pd.notna(row["Merceologia"]) else ""
-            )
-            tranche = str(row["Tranche"]).strip() if pd.notna(row["Tranche"]) else ""
-            data_inizio = row["Data inizio"]
-
-            # Format date
-            if pd.notna(data_inizio):
-                if isinstance(data_inizio, str):
-                    # Try to parse string date
-                    try:
-                        date_obj = pd.to_datetime(data_inizio)
-                        formatted_date = date_obj.strftime("%Y-%m-%d")
-                    except Exception:
-                        formatted_date = str(data_inizio)
-                else:
-                    formatted_date = pd.to_datetime(data_inizio).strftime("%Y-%m-%d")
-            else:
-                formatted_date = ""
-
-            # Create formatted string based on your example pattern
-            # You'll need to customize this logic based on your actual data structure
-            # This is a template - adjust according to your specific requirements
-
-            # Example format: 0SN1796039EXS,1796-039E,M Slip Normale D C,AAP,25MD,0SN1796  039EXS,0SN1796,039E,XS,AAP,2025-06-12
-            formatted_string = create_formatted_string(
-                chiave_articolo,
-                merceologia,
-                tranche,
-                formatted_date,
-                row,  # Pass entire row in case you need other columns
-            )
-
-            if formatted_string:  # Only add non-empty strings
-                formatted_rows.append(formatted_string)
-
-        except Exception as e:
-            # Log error for this row but continue processing
-            print(f"Error processing row {index}: {str(e)}")
-            continue
-
-    return formatted_rows
-
-
-def create_formatted_string(chiave_articolo, merceologia, tranche, formatted_date, row):
-    """
-    Create the formatted string based on your specific requirements.
-    You'll need to customize this function based on how your data maps
-    to the desired output format.
-
-    Example output: 0SN1796039EXS,1796-039E,M Slip Normale D C,AAP,25MD,0SN1796  039EXS,0SN1796,039E,XS,AAP,2025-06-12
-    """
-
-    # This is a template implementation - customize based on your data structure
-    # You may need additional columns or different logic
-
-    try:
-        # Extract or generate components for your format
-        # Adjust these based on your actual data structure
-
-        component1 = chiave_articolo  # First component
-        component2 = extract_component2(
-            chiave_articolo
-        )  # Second component (derived from chiave_articolo?)
-        component3 = merceologia  # Third component
-        component4 = tranche  # Fourth component
-        component5 = extract_component5(row)  # Fifth component (from other column?)
-        component6 = extract_component6(chiave_articolo)  # Sixth component
-        component7 = extract_component7(chiave_articolo)  # Seventh component
-        component8 = extract_component8(chiave_articolo)  # Eighth component
-        component9 = extract_component9(row)  # Ninth component
-        component10 = tranche  # Tenth component (reuse tranche?)
-        component11 = formatted_date  # Date component
-
-        # Combine components
-        formatted_string = f"{component1},{component2},{component3},{component4},{component5},{component6},{component7},{component8},{component9},{component10},{component11}"
-
-        return formatted_string
-
-    except Exception as e:
-        print(f"Error creating formatted string: {str(e)}")
-        return None
-
-
-# Helper functions to extract components - customize based on your data
-def extract_component2(chiave_articolo):
-    """Extract second component from chiave_articolo"""
-    # Example logic - customize based on your data pattern
-    if len(chiave_articolo) >= 10:
-        return f"{chiave_articolo[3:7]}-{chiave_articolo[7:11]}"
-    return chiave_articolo
-
-
-def extract_component5(row):
-    """Extract fifth component from row data"""
-    # Add logic based on your data structure
-    # This might come from another column in your Excel
-    return "25MD"  # Placeholder
-
-
-def extract_component6(chiave_articolo):
-    """Extract sixth component"""
-    # Add logic based on your data pattern
-    return chiave_articolo  # Placeholder
-
-
-def extract_component7(chiave_articolo):
-    """Extract seventh component"""
-    # Add logic based on your data pattern
-    if len(chiave_articolo) >= 7:
-        return chiave_articolo[:7]
-    return chiave_articolo
-
-
-def extract_component8(chiave_articolo):
-    """Extract eighth component"""
-    # Add logic based on your data pattern
-    if len(chiave_articolo) >= 11:
-        return chiave_articolo[7:11]
-    return ""
-
-
-def extract_component9(row):
-    """Extract ninth component"""
-    # This might come from another column or be derived
-    return "XS"  # Placeholder
+#     return response
