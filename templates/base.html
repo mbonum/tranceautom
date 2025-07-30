@@ -24,7 +24,8 @@
     .h3,
     .h4,
     .h5,
-    .h6 {
+    .h6,
+    p {
       margin-top: 0;
       margin-bottom: 0;
     }
@@ -34,7 +35,7 @@
 <body class="bg-light">
   <header>
     {% if user.is_authenticated %}
-    <form method="post" action="{% url 'logout' %}" style="display:inline; float:right; margin:0;">
+    <form method="post" action="{% url 'logout' %}" class="position-fixed bottom-0 start-0 mb-4">
       {% csrf_token %}
       <button type="submit" class="btn btn-secondary mx-4"><i class="bi bi-box-arrow-in-left"></i> Logout</button>
     </form>
