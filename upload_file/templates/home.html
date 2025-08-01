@@ -82,10 +82,10 @@
     <div class="col-md-6 mb-3">
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title text-center mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Tranche Automation</h3>
+          <h4 class="card-title text-center mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Tranche Automation</h4>
         </div>
         <div class="card-body">
-          <form method="post" enctype="multipart/form-data">
+          <form id="upload-form" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {% if error %}
             <div class="alert alert-danger" role="alert">{{ error }}</div>
@@ -94,11 +94,10 @@
             <div class="mb-3">
               <label for="file" class="form-label">Select File</label>
               <input type="file" class="form-control" name="file" id="file" accept=".xlsx,.xls,.csv" />
-              <div class="form-text">Upload an Excel file (.xlsx, .xls) to convert to CSV, or a CSV file to validate
-                and preview</div>
+              <div class="form-text">Upload an Excel file (.xlsx, .xls) to convert to CSV, or a CSV file to validate and preview</div>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100">
+            <button id="upload-btn" type="submit" class="btn btn-primary w-100">
               <i class="bi bi-upload"></i> Upload & Process File
             </button>
           </form>
@@ -188,10 +187,7 @@
     <div style="overflow-x: auto; width: 100%;" id="tableWrapper">
       {{ preview|safe }}
     </div>
-  </div> -->
-
-<script>
-  const topScrollbar = document.getElementById('topScrollbar');
+  </div>   const topScrollbar = document.getElementById('topScrollbar');
   const tableWrapper = document.getElementById('tableWrapper');
   const topScrollbarContent = document.getElementById('topScrollbarContent');
 
@@ -212,17 +208,31 @@
 
   // Initialize after content loads
   setTimeout(updateScrollbarWidth, 100);
-  window.addEventListener('resize', updateScrollbarWidth);
-
+  window.addEventListener('resize', updateScrollbarWidth);-->
+<iframe id="download-target" name="download-target" style="display:none;"></iframe>
+<script>
   // Handle editable table and XML download
   document.addEventListener('DOMContentLoaded', function () {
+
+    // const uploadForm = document.getElementById('upload-form');
+    // const uploadBtn = document.getElementById('upload-btn');
+    // if (uploadForm && uploadBtn) {
+    //   uploadForm.addEventListener('submit', function () {
+    //     // Replace the button content with a spinner
+    //     uploadBtn.innerHTML = `
+    //       <div class="spinner-border" role="status">
+    //         <span class="sr-only">Loading...</span>
+    //       </div>
+    //     `;
+    //     // Optionally disable the button to prevent double submissions
+    //     uploadBtn.disabled = true;
+    //   });
+    // }
+
     const downloadBtn = document.getElementById('download-xml-btn');
 
     if (downloadBtn) {
       downloadBtn.addEventListener('click', function () {
-        console.log('Download button clicked'); // Debug log
-
-        // Collect all edited data from the table
         const table = document.getElementById('editable-table');
         if (!table) {
           alert('Table not found!');
@@ -241,20 +251,19 @@
           editedData.push(rowData);
         });
 
-        console.log('Collected data:', editedData); // Debug log
-
         if (editedData.length === 0) {
           alert('No data to download!');
           return;
         }
 
-        // Create a form and submit the data
+        // Create a form to submit edited data
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '/download-xml/'; // Use absolute URL
+        form.action = '/download-xml/';
+        form.target = 'download-target'; // So it doesn't navigate away
         form.style.display = 'none';
 
-        // Add CSRF token
+        // CSRF token
         const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
         if (!csrfTokenElement) {
           alert('CSRF token not found!');
@@ -267,27 +276,21 @@
         csrfInput.value = csrfTokenElement.value;
         form.appendChild(csrfInput);
 
-        // Add edited data
+        // Edited data
         const dataInput = document.createElement('input');
         dataInput.type = 'hidden';
         dataInput.name = 'edited_data';
         dataInput.value = JSON.stringify(editedData);
         form.appendChild(dataInput);
 
-        console.log('Submitting form with data:', JSON.stringify(editedData)); // Debug log
-
         document.body.appendChild(form);
         form.submit();
 
         // Clean up
         setTimeout(() => {
-          if (document.body.contains(form)) {
-            document.body.removeChild(form);
-          }
+          document.body.removeChild(form);
         }, 1000);
       });
-    } else {
-      console.log('Download button not found'); // Debug log
     }
 
     // Add visual feedback for cell editing
