@@ -1,11 +1,11 @@
-# Trance automation
+# Tranche automation
 
 Django app
 
-1. Get excel file
-2. Convert to csv (?)
-3. Convert to xml
-4. User validation (FE preview)
+1. Get excel file. Check the excel is valid: PIANIFICAZIONE sheet, specific columns
+2. Convert to csv
+3. Show csv table. Make it editable. The user is responsible for the final validation.
+4. Before downloading the XML, convert the edited csv to xml
 5. Download xml
 6. Upload xml to PIM folder (manually)
 
