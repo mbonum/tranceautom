@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "upload_file",
+    "social_django",
     # "preview_xml",
 ]
 
@@ -85,6 +86,38 @@ DATABASES = {
     }
 }
 
+AUTHENTICATION_BACKENDS = [
+    "social_core.backends.okta.OktaOAuth2",  # Okta authentication
+    "django.contrib.auth.backends.ModelBackend",  # Standard Django auth
+]
+
+# Okta configuration
+SOCIAL_AUTH_OKTA_OAUTH2_KEY = env("OKTA_CLIENT_ID")
+SOCIAL_AUTH_OKTA_OAUTH2_SECRET = "client-secret"
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER")  # + "/oauth2/default"
+
+# Optional: User creation settings
+SOCIAL_AUTH_USER_MODEL = "auth.User"
+SOCIAL_AUTH_CREATE_USERS = True
+SOCIAL_AUTH_UPDATE_LAST_LOGIN = True
+
+# Pipeline for user creation/updating
+SOCIAL_AUTH_PIPELINE = (
+    "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_uid",
+    "social_core.pipeline.social_auth.auth_allowed",
+    "social_core.pipeline.social_auth.social_user",
+    "social_core.pipeline.user.get_username",
+    "social_core.pipeline.user.create_user",
+    "social_core.pipeline.social_auth.associate_user",
+    "social_core.pipeline.social_auth.load_extra_data",
+    "social_core.pipeline.user.user_details",
+)
+
+# Redirect URLs
+SOCIAL_AUTH_LOGIN_REDIRECT_URL = "/"
+SOCIAL_AUTH_LOGIN_ERROR_URL = "/login/"
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
