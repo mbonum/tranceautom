@@ -22,6 +22,15 @@
             {% endfor %}
             {% endif %}
 
+            <div class="okta-login text-center mt-1">
+              <a href="{% url 'social:begin' 'okta-oauth2' %}" class="btn btn-primary d-flex justify-content-center  align-items-center">
+                <!-- <img src="https://ok14static.oktacdn.com/assets/js/sdk/okta-signin-widget/6.9.0/img/icons/mfa/oktaVerify_authenticator.png" alt="Okta Logo" class="me-2" style="width: 20px; height: 20px;"> -->
+                <svg class="mx-1" width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><defs><style>.a{fill:none;stroke:#00008B;stroke-linecap:round;stroke-linejoin:round;stroke-width:3px;}</style></defs><path class="a" d="M42.0125,12.2567a21.53,21.53,0,1,1-1.6753-2.2339"/><path class="" d="M34.699,19.7748a11.5133,11.5133,0,1,1-1.4728-2.641" fill="#ffffff"/><polyline class="a" points="40.336 10.024 24 26.36 19.28 21.64"/></svg> Sign in with Okta
+              </a>
+            </div>
+            <div class="okta-login text-center my-3">
+              <p>or sign in with the given credentials</p>
+            </div>
             <form method="post">
               {% csrf_token %}
               <div class="mb-3">
@@ -38,7 +47,7 @@
                 <input type="password" class="form-control" id="password" name="password" required>
               </div>
 
-              <button type="submit" class="btn btn-primary w-100">
+              <button type="submit" class="btn btn-primary w-100 mb-1">
                 <i class="bi bi-box-arrow-in-right"></i> Sign In
               </button>
             </form>

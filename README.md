@@ -1,7 +1,8 @@
-# Tranche automation
+# Tranche automation (v2)
 
 Django app
 
+0. Okta auth
 1. Get excel file. Check the excel is valid: PIANIFICAZIONE sheet, specific columns
 2. Convert to csv
 3. Show csv table. Make it editable. The user is responsible for the final validation.
