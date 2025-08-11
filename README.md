@@ -38,4 +38,4 @@ uv pip install google-cloud-secret-manager google-cloud-storage
 
 <!-- google-cloud-discoveryengine
 google-cloud-resource-manager
-git remote set-url origin https://mirko-bonomi@bitbucket.org/calzedoniagroup/trance-autom.git -->
+git remote set-url origin https://mirko-bonomi@bitbucket.org/calzedoniagroup/tranche-autom.git -->
