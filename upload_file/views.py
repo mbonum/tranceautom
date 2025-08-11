@@ -133,7 +133,11 @@ def home(request):
     }
 
     if request.method == "POST" and "file" in request.FILES:
-        request.session.flush()  # Clear session on new upload
+        # Clear only the data related to a previous file upload, not the whole session.
+        # request.session.flush() would log the user out.
+        for key in ["tranches_data", "original_filename"]:
+            if key in request.session:
+                del request.session[key]
         try:
             uploaded_file = request.FILES["file"]
             if not (
