@@ -114,7 +114,7 @@
       </div>
     </div>
     {% if preview %}
-    <div class="col-md-12">
+    <div class="col-md-12 mb-3">
       <div class="card">
         <div class="card-body">
           <div class="download-section">
@@ -341,7 +341,7 @@
 
     // Add visual feedback for cell editing
     const editableCells = document.querySelectorAll('.editable-cell');
-    console.log('Found editable cells:', editableCells.length); // Debug log
+    // console.log('Found editable cells:', editableCells.length); // Debug log
 
     editableCells.forEach(cell => {
       cell.addEventListener('focus', function () {

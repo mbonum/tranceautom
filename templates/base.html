@@ -37,7 +37,7 @@
     {% if user.is_authenticated %}
     <form method="post" action="{% url 'logout' %}" class="position-fixed bottom-0 start-0 mb-4">
       {% csrf_token %}
-      <button type="submit" class="btn btn-secondary mx-4"><i class="bi bi-box-arrow-in-left"></i> Logout</button>
+      <button type="submit" class="btn btn-secondary mx-4"><i class="bi bi-box-arrow-in-left"></i> Exit</button>
     </form>
     {% endif %}
     <!-- <h1>{% block header %}{% endblock %}</h1> -->
