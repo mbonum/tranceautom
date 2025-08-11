@@ -2,14 +2,16 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, reverse
 import csv
 import logging
-import io
+
+# import io
+import json
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_protect
 import pandas as pd
 from django.http import HttpResponse
-# from django.views.decorators.csrf import csrf_exempt
-# from django.views.decorators.http import require_http_methods
 # import openpyxl
 # from datetime import datetime
 # import traceback
@@ -120,270 +122,242 @@ def user_register(request):
 # Update your existing home view to require login
 @login_required
 def home(request):
-    error = None
-    preview = None
-    csv_data = None
-    filename = None
-    file_type = None
-    validation_info = None
+    context = {
+        "error": None,
+        "preview": False,
+        "filename": request.session.get("original_filename"),
+        "tranches": list(request.session.get("tranches_data", {}).keys()),
+        "selected_tranche": None,
+        "table_data": [],
+        "table_headers": [],
+    }
 
-    if request.method == "POST":
+    if request.method == "POST" and "file" in request.FILES:
+        request.session.flush()  # Clear session on new upload
         try:
-            uploaded_file = request.FILES.get("file")
-            if not uploaded_file:
-                error = "Please select a file."
-            elif not (
-                uploaded_file.name.endswith(".xlsx")
+            uploaded_file = request.FILES["file"]
+            if not (
+                uploaded_file.name.lower().endswith(".xlsx")
                 or uploaded_file.name.endswith(".xls")
-                or uploaded_file.name.endswith(".csv")
             ):
-                error = "Only Excel files (xlsx, xls) and CSV files are allowed."
+                context["error"] = "Only Excel files (.xlsx, .xls) are allowed."
             else:
-                file_extension = uploaded_file.name.lower().split(".")[-1]
+                # Handle Excel file
+                uploaded_file.seek(0)
+                xls = pd.ExcelFile(uploaded_file)
+                sheet_to_find = "PIANIFICAZIONE"
+                actual_sheet_name = next(
+                    (s for s in xls.sheet_names if s.lower() == sheet_to_find.lower()),
+                    None,
+                )
 
-                if file_extension == "csv":
-                    # Handle CSV file
-                    file_type = "CSV"
-                    is_valid, result = validate_csv(uploaded_file)
-
-                    if not is_valid:
-                        error = result
-                    else:
-                        df = result
-                        validation_info = {
-                            "rows": len(df),
-                            "columns": len(df.columns),
-                            "column_names": list(df.columns),
-                        }
-
-                        # Create preview
-                        preview_df = df
-
-                        # Store original data as JSON for editing
-                        table_headers = preview_df.columns.tolist()
-                        table_data = preview_df.fillna("").astype(str).values.tolist()
-
-                        # Store in session for XML generation
-                        request.session["table_data"] = table_data
-                        request.session["table_headers"] = table_headers
-
-                        preview = preview_df.to_html(
-                            classes="table table-striped table-bordered",
-                            index=False,
-                            table_id="csv-preview",
-                        )
-
-                        # For CSV files, we can optionally store the data for re-download
-                        uploaded_file.seek(0)
-                        csv_data = uploaded_file.read().decode("utf-8")
-                        filename = uploaded_file.name
-
-                        request.session["csv_data"] = csv_data
-                        request.session["csv_filename"] = filename
-
+                if not actual_sheet_name:
+                    context["error"] = (
+                        f"The Excel file does not contain a sheet named '{sheet_to_find}'."
+                    )
                 else:
-                    # Handle Excel file
-                    file_type = "Excel"
-                    uploaded_file.seek(0)
-
-                    # Use ExcelFile to inspect sheets first
-                    xls = pd.ExcelFile(uploaded_file)
-
-                    sheet_to_find = "PIANIFICAZIONE"
-                    actual_sheet_name = None
-                    # Case-insensitive search for the sheet
-                    for s in xls.sheet_names:
-                        if s.lower() == sheet_to_find.lower():
-                            actual_sheet_name = s
+                    df_raw = pd.read_excel(
+                        xls, sheet_name=actual_sheet_name, header=None
+                    )
+                    header_keyword = "chiave articolo colore"
+                    header_row_index = -1
+                    for i, row in df_raw.iterrows():
+                        row_str = " ".join(
+                            str(x) for x in row.values if pd.notna(x)
+                        ).lower()
+                        if header_keyword in row_str:
+                            header_row_index = i
                             break
 
-                    if not actual_sheet_name:
-                        error = f"The Excel file does not contain a sheet named '{sheet_to_find}'."
-                    else:
-                        # Read the sheet without a header to find the real header row
-                        df_raw = pd.read_excel(
-                            xls, sheet_name=actual_sheet_name, header=None
+                    if header_row_index == -1:
+                        context["error"] = (
+                            f"Could not find the header row containing '{header_keyword}' in sheet '{actual_sheet_name}'."
                         )
+                    else:
+                        new_header = df_raw.iloc[header_row_index]
+                        df_data = df_raw[header_row_index + 1 :].copy()
+                        df_data.columns = new_header
+                        df_data.dropna(axis=1, how="all", inplace=True)
 
-                        # Find the real header row based on a keyword
-                        header_keyword = "chiave articolo colore"
-                        header_row_index = -1
-                        for i, row in df_raw.iterrows():
-                            row_str = " ".join(
-                                str(x) for x in row.values if pd.notna(x)
-                            ).lower()
-                            if header_keyword in row_str:
-                                header_row_index = i
-                                break
+                        df_data["tranche_group"] = df_data.isnull().all(axis=1).cumsum()
+                        df_data_no_empty = df_data.dropna(how="all").copy()
 
-                        if header_row_index == -1:
-                            error = f"Could not find the header row containing '{header_keyword}' in sheet '{actual_sheet_name}'."
+                        if df_data_no_empty.empty:
+                            context["error"] = "No data found after header."
                         else:
-                            # Set the found row as the new header and slice the data
-                            new_header = df_raw.iloc[header_row_index]
-                            df = df_raw[header_row_index + 1 :].copy()
-                            df.columns = new_header
+                            tranches_dfs = [
+                                group.drop("tranche_group", axis=1)
+                                for _, group in df_data_no_empty.groupby(
+                                    "tranche_group"
+                                )
+                            ]
+                            tranches_data = {}
+                            for i, tranche_df in enumerate(tranches_dfs):
+                                df = tranche_df.copy()
+                                if not df.empty:
+                                    df.dropna(subset=[df.columns[0]], inplace=True)
 
-                            # --- Data Cleaning ---
-                            # 1. Drop columns that are completely empty
-                            df.dropna(axis=1, how="all", inplace=True)
+                                if not df.empty:
+                                    # Add original row number (1-based) as the first column
+                                    df.insert(0, "#", df.index + 1)
+                                    df.reset_index(drop=True, inplace=True)
+                                    df.fillna("", inplace=True)
 
-                            # 2. Drop rows that are completely empty
-                            df.dropna(axis=0, how="all", inplace=True)
-
-                            # 3. Drop rows that are likely section headers (empty first column)
-                            if not df.empty:
-                                df.dropna(subset=[df.columns[0]], inplace=True)
-
-                            # 4. Reset index after dropping rows
-                            df.reset_index(drop=True, inplace=True)
-
-                            # 5. Fill any remaining NaN values with empty strings
-                            df.fillna("", inplace=True)
-
-                            # --- Continue with processing the cleaned df ---
-                            csv_buffer = io.StringIO()
-                            df.to_csv(csv_buffer, index=False)
-                            csv_data = csv_buffer.getvalue()
-
-                            base_filename = uploaded_file.name.rsplit(".", 1)[0]
-                            filename = f"{base_filename}_{actual_sheet_name}.csv"
-
-                            validation_info = {
-                                "rows": len(df),
-                                "columns": len(df.columns),
-                                "column_names": list(df.columns),
-                            }
-
-                            preview_df = df
-
-                            table_headers = preview_df.columns.tolist()
-                            table_data = preview_df.astype(str).values.tolist()
-
-                            request.session["table_data"] = table_data
-                            request.session["table_headers"] = table_headers
-
-                            preview = preview_df.to_html(
-                                classes="table table-striped table-bordered",
-                                index=False,
-                                table_id="csv-preview",
-                            )
-
-                            request.session["csv_data"] = csv_data
-                            request.session["csv_filename"] = filename
-
+                                    table_headers = df.columns.tolist()
+                                    table_data = df.astype(str).values.tolist()
+                                    tranche_name = f"Tranche {i + 1}"
+                                    tranches_data[tranche_name] = {
+                                        "headers": table_headers,
+                                        "data": table_data,
+                                    }
+                            if not tranches_data:
+                                context["error"] = "No valid data tranches found."
+                            else:
+                                request.session["tranches_data"] = tranches_data
+                                request.session["original_filename"] = (
+                                    uploaded_file.name
+                                )
+                                first_tranche_name = list(tranches_data.keys())[0]
+                                return redirect(
+                                    f"{reverse('home')}?tranche={first_tranche_name}"
+                                )
         except Exception as e:
-            error = f"Could not process the file: {str(e)}"
-            logger.error(f"Error processing file: {str(e)}")
+            context["error"] = f"Could not process the file: {str(e)}"
+            logger.error(f"Error processing file: {str(e)}", exc_info=True)
 
-    return render(
-        request,
-        "home.html",
-        {
-            "error": error,
-            "preview": preview,
-            "filename": filename,
-            "file_type": file_type,
-            "validation_info": validation_info,
-            "table_data": request.session.get("table_data", []),
-            "table_headers": request.session.get("table_headers", []),
-        },
+    tranches_data = request.session.get("tranches_data")
+    if tranches_data:
+        context["preview"] = True
+        selected_tranche_name = request.GET.get("tranche")
+
+        if not selected_tranche_name and context["tranches"]:
+            first_tranche = list(context["tranches"])[0]
+            return redirect(f"{request.path}?tranche={first_tranche}")
+
+        if selected_tranche_name in tranches_data:
+            context["selected_tranche"] = selected_tranche_name
+            tranche_content = tranches_data[selected_tranche_name]
+            context["table_headers"] = tranche_content["headers"]
+            context["table_data"] = tranche_content["data"]
+        elif selected_tranche_name:
+            context["error"] = f"Tranche '{selected_tranche_name}' not found."
+
+    return render(request, "home.html", context)
+
+
+def generate_xml_content(edited_data, original_filename, username, tranche_name):
+    """Generate XML content from edited data"""
+
+    def escape_xml(text):
+        """Escape XML special characters"""
+        if text is None:
+            return ""
+        return (
+            str(text)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+            .replace("'", "&apos;")
+        )
+
+    xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+    xml_lines.append(
+        f'<data source_file="{escape_xml(original_filename)}" tranche="{escape_xml(tranche_name)}">'
     )
 
+    # Add metadata
+    xml_lines.append("  <metadata>")
+    xml_lines.append(f"    <total_rows>{len(edited_data)}</total_rows>")
+    xml_lines.append(
+        f"    <total_columns>{len(edited_data[0]) if edited_data else 0}</total_columns>"
+    )
+    xml_lines.append(
+        f"    <generated_at>{pd.Timestamp.now().isoformat()}</generated_at>"
+    )
+    xml_lines.append(f"    <user>{escape_xml(username)}</user>")
+    xml_lines.append("  </metadata>")
 
-# Update your existing download views to require login
+    # Add data rows
+    xml_lines.append("  <records>")
+
+    for i, row in enumerate(edited_data):
+        xml_lines.append(f'    <record id="{i + 1}">')
+
+        for j, cell_value in enumerate(row):
+            safe_value = escape_xml(cell_value) if cell_value else ""
+            xml_lines.append(f"      <column_{j + 1}>{safe_value}</column_{j + 1}>")
+
+        xml_lines.append("    </record>")
+
+    xml_lines.append("  </records>")
+    xml_lines.append("</data>")
+
+    return "\n".join(xml_lines)
+
+
 @login_required
+@require_http_methods(["POST"])
+@csrf_protect
 def download_xml(request):
     """View to handle XML download with edited data"""
-    import json
-
     try:
-        if request.method == "POST":
-            # Get edited data from the request
-            edited_data_str = request.POST.get("edited_data", "[]")
+        edited_data_str = request.POST.get("edited_data", "[]")
+        tranche_name = request.POST.get("tranche_name")
+
+        if not edited_data_str.strip():
+            logger.warning("Empty edited_data received")
+            return HttpResponse("No data provided.", status=400)
+
+        if not tranche_name:
+            logger.warning("Tranche name not provided")
+            return HttpResponse("Tranche name not provided.", status=400)
+
+        try:
             edited_data = json.loads(edited_data_str)
-            original_filename = request.session.get(
-                "csv_filename", "converted_file.csv"
-            )
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode error: {e}")
+            return HttpResponse("Invalid data format.", status=400)
 
-            if not edited_data:
-                return HttpResponse("No data available for download.", status=400)
+        original_filename = request.session.get(
+            "original_filename", "converted_file.csv"
+        )
 
-            # Create XML manually to avoid import issues
-            xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>']
-            xml_lines.append(f'<data source_file="{original_filename}">')
+        if not edited_data:
+            logger.warning("Empty edited_data list")
+            return HttpResponse("No data available for download.", status=400)
 
-            # Add metadata
-            xml_lines.append("  <metadata>")
-            xml_lines.append(f"    <total_rows>{len(edited_data)}</total_rows>")
-            xml_lines.append(
-                f"    <total_columns>{len(edited_data[0]) if edited_data else 0}</total_columns>"
-            )
-            xml_lines.append(f"    <generated_at>{pd.Timestamp.now()}</generated_at>")
-            xml_lines.append(f"    <user>{request.user.username}</user>")
-            xml_lines.append("  </metadata>")
+        if not isinstance(edited_data, list) or not all(
+            isinstance(row, list) for row in edited_data
+        ):
+            logger.error("Invalid data structure")
+            return HttpResponse("Invalid data structure.", status=400)
 
-            # Add data rows
-            xml_lines.append("  <records>")
+        xml_content = generate_xml_content(
+            edited_data, original_filename, request.user.username, tranche_name
+        )
 
-            for i, row in enumerate(edited_data):
-                xml_lines.append(f'    <record id="{i + 1}">')
+        base_filename = (
+            original_filename.rsplit(".", 1)[0] if original_filename else "data"
+        )
+        safe_tranche_name = (
+            "".join(c for c in tranche_name if c.isalnum() or c in (" ", "_"))
+            .rstrip()
+            .replace(" ", "_")
+        )
+        xml_filename = (
+            f"{base_filename}_{safe_tranche_name}_edited_by_{request.user.username}.xml"
+        )
 
-                for j, cell_value in enumerate(row):
-                    # Escape XML special characters
-                    safe_value = (
-                        str(cell_value)
-                        .replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;")
-                        .replace('"', "&quot;")
-                        .replace("'", "&apos;")
-                        if cell_value
-                        else ""
-                    )
-                    xml_lines.append(
-                        f"      <column_{j + 1}>{safe_value}</column_{j + 1}>"
-                    )
+        response = HttpResponse(xml_content, content_type="application/xml")
+        response["Content-Disposition"] = f'attachment; filename="{xml_filename}"'
+        response["Content-Length"] = len(xml_content.encode("utf-8"))
 
-                xml_lines.append("    </record>")
+        logger.info(
+            f"XML file '{xml_filename}' generated successfully for user {request.user.username}"
+        )
+        return response
 
-            xml_lines.append("  </records>")
-            xml_lines.append("</data>")
-
-            # Join all lines
-            xml_content = "\n".join(xml_lines)
-
-            # Generate filename
-            base_filename = (
-                original_filename.rsplit(".", 1)[0] if original_filename else "data"
-            )
-            xml_filename = f"{base_filename}_edited_by_{request.user.username}.xml"
-
-            response = HttpResponse(xml_content, content_type="application/xml")
-            response["Content-Disposition"] = f'attachment; filename="{xml_filename}"'
-
-            return response
-
-        return HttpResponse("Invalid request method.", status=405)
-
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}")
-        return HttpResponse("Invalid data format.", status=400)
     except Exception as e:
-        logger.error(f"Error generating XML: {e}")
+        logger.error(f"Unexpected error generating XML: {e}", exc_info=True)
         return HttpResponse("Error generating XML file.", status=500)
-
-
-# @login_required
-# def download_csv(request):
-#     """View to handle CSV download (kept for backward compatibility)"""
-#     csv_data = request.session.get("csv_data")
-#     filename = request.session.get("csv_filename", "converted_file.csv")
-
-#     if not csv_data:
-#         return HttpResponse("No CSV data available for download.", status=400)
-
-#     response = HttpResponse(csv_data, content_type="text/csv")
-#     response["Content-Disposition"] = f'attachment; filename="{filename}"'
-
-#     return response

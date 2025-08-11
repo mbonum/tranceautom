@@ -29,7 +29,7 @@ env = environ.Env(DEBUG=(bool, False))
 
 SECRET_KEY = env("SECRET_KEY")
 
-ALLOWED_HOSTS = ["127.0.0.1"]  # ['app-xyz.a.run.app', 'gcp-url']
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]  # ['app-xyz.a.run.app', 'gcp-url']
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -93,7 +93,7 @@ AUTHENTICATION_BACKENDS = [
 
 # Okta configuration
 SOCIAL_AUTH_OKTA_OAUTH2_KEY = env("OKTA_CLIENT_ID")
-SOCIAL_AUTH_OKTA_OAUTH2_SECRET = "client-secret"
+SOCIAL_AUTH_OKTA_OAUTH2_SECRET = env("OKTA_CLIENT_SECRET")
 SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER")  # + "/oauth2/default"
 
 # Optional: User creation settings
