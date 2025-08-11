@@ -31,6 +31,7 @@
     overflow: auto;
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
+    margin-top: 1rem;
   }
 
   #editable-table {
@@ -44,6 +45,15 @@
     min-width: 100px;
     background-color: white;
     cursor: text;
+  }
+
+  .row-number-cell {
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    font-weight: bold;
+    text-align: center;
+    cursor: default;
   }
 
   .editable-cell:focus {
@@ -65,16 +75,15 @@
   .download-section {
     background-color: #f8f9fa;
     border-radius: 0.375rem;
-    padding: 1.5rem;
-    margin-top: 1rem;
+    padding: 1rem;
   }
 
   .edit-info {
     background-color: #fff3cd;
     border: 1px solid #ffeaa7;
     border-radius: 0.375rem;
-    padding: 10px;
-    margin-bottom: 15px;
+    padding: 1rem;
+    margin-bottom: 1rem;  
   }
 </style>
 <div class="container mt-5">
@@ -98,7 +107,7 @@
             </div>
 
             <button id="upload-btn" type="submit" class="btn btn-primary w-100">
-              <i class="bi bi-upload"></i> Upload & Process File
+              <i class="bi bi-upload"></i> Upload
             </button>
           </form>
         </div>
@@ -116,19 +125,27 @@
               <p><i class="bi bi-check-square"></i> <strong>Check</strong> that everything is correct in the XML.</p>
               <p><i class="bi bi-copy"></i> <strong>Copy</strong> the XML file and paste it into the PIM folder.</p>
             </div>
+            {% if filename %}
+            <p class="mb-2"><strong>File:</strong> {{ filename }}</p>
+            {% endif %}
+            {% if tranches %}
+            <div class="mb-3">
+              <label for="tranche-selector" class="form-label">Select Tranche</label>
+              <select id="tranche-selector" class="form-select">
+                {% for tranche in tranches %}
+                <option value="{{ tranche }}" {% if tranche == selected_tranche %}selected{% endif %}>{{ tranche }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
             <div class="d-flex flex-row-reverse align-items-center">
-              <button id="download-xml-btn" class="btn btn-success">
+              <button id="download-xml-btn" class="btn btn-success" {% if not selected_tranche %}disabled{% endif %}>
                 <i class="bi bi-download"></i> Download XML
               </button>
             </div>
           </div>
-
-          <!-- <h6>{% if file_type == "Excel" %}Editable Data Preview:{% else %}Editable CSV Content:{% endif %}</h6> -->
           <div class="preview-container">
             {% if table_headers and table_data %}
-            <!-- <div class="top-scrollbar-wrapper" id="topScrollbar">
-                  <div class="top-scrollbar-content" id="topScrollbarContent"></div>
-                </div> -->
             <table id="editable-table" class="table table-striped table-bordered">
               <thead>
                 <tr>
@@ -141,13 +158,20 @@
                 {% for row in table_data %}
                 <tr>
                   {% for cell in row %}
-                  <td class="editable-cell" contenteditable="true" data-row="{{ forloop.parentloop.counter0 }}"
-                    data-col="{{ forloop.counter0 }}">{{ cell|default:"" }}</td>
+                    {% if forloop.first %}
+                  <td class="row-number-cell" contenteditable="false">{{ cell|default:"" }}</td>
+                    {% else %}
+                  <td class="editable-cell" contenteditable="true">{{ cell|default:"" }}</td>
+                    {% endif %}
                   {% endfor %}
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
+            {% elif tranches %}
+            <div class="text-center p-5">
+              <p>Select a tranche to view and edit its data.</p>
+            </div>
             {% endif %}
           </div>
         </div>
@@ -230,6 +254,15 @@
     // }
 
     const downloadBtn = document.getElementById('download-xml-btn');
+    const trancheSelector = document.getElementById('tranche-selector');
+
+    if (trancheSelector) {
+      trancheSelector.addEventListener('change', function () {
+        const selectedTranche = this.value;
+        // reload page with new tranche selected
+        window.location.href = window.location.pathname + '?tranche=' + encodeURIComponent(selectedTranche);
+      });
+    }
 
     if (downloadBtn) {
       downloadBtn.addEventListener('click', function () {
@@ -243,7 +276,7 @@
         const editedData = [];
 
         rows.forEach(row => {
-          const cells = row.querySelectorAll('.editable-cell');
+          const cells = row.querySelectorAll('td');
           const rowData = [];
           cells.forEach(cell => {
             rowData.push(cell.textContent.trim());
@@ -270,6 +303,19 @@
           return;
         }
 
+        // Add tranche name to the form
+        const urlParams = new URLSearchParams(window.location.search);
+        const trancheName = urlParams.get('tranche');
+
+        if (!trancheName) {
+          alert('Please select a tranche first.');
+          return;
+        }
+        const trancheInput = document.createElement('input');
+        trancheInput.type = 'hidden';
+        trancheInput.name = 'tranche_name';
+        trancheInput.value = trancheName;
+        form.appendChild(trancheInput);
         const csrfInput = document.createElement('input');
         csrfInput.type = 'hidden';
         csrfInput.name = 'csrfmiddlewaretoken';
