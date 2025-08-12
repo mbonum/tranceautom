@@ -14,13 +14,14 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy app code
 COPY . .
 
+# Copy and set permissions for entrypoint script
+COPY entrypoint.sh .
+RUN chmod +x /app/entrypoint.sh
+
 # Collect static files at build time
 RUN python manage.py collectstatic --noinput
 
-# Run migrations (optional, or do it in CI/CD)
-# RUN python manage.py migrate
-
 EXPOSE 8080
 
-# Start uvicorn with Django's ASGI app
-CMD ["uvicorn", "tranceautom.asgi:application", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
+# Run the entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]
