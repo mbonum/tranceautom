@@ -103,7 +103,8 @@
             <div class="mb-3">
               <label for="file" class="form-label">Select File</label>
               <input type="file" class="form-control" name="file" id="file" accept=".xlsx,.xls,.csv" />
-              <div class="form-text">Upload an Excel file (.xlsx, .xls) to convert to CSV, or a CSV file to validate and preview</div>
+              <div class="form-text">Upload an Excel file (.xlsx, .xls)</div>
+              {# <!-- to convert to CSV, or a CSV file to validate and preview --> #}
             </div>
 
             <button id="upload-btn" type="submit" class="btn btn-primary w-100">
@@ -181,7 +182,7 @@
   </div>
 </div>
 </div>
-<!-- <div class="container pt-3 pb-4">
+{% comment %}<!-- <div class="container pt-3 pb-4">
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-5">
       <div class="card shadow-sm p-4">
@@ -232,26 +233,25 @@
 
   // Initialize after content loads
   setTimeout(updateScrollbarWidth, 100);
-  window.addEventListener('resize', updateScrollbarWidth);-->
+  window.addEventListener('resize', updateScrollbarWidth);
+  // const uploadForm = document.getElementById('upload-form');
+  // const uploadBtn = document.getElementById('upload-btn');
+  // if (uploadForm && uploadBtn) {
+  //   uploadForm.addEventListener('submit', function () {
+  //     // Replace the button content with a spinner
+  //     uploadBtn.innerHTML = `
+  //       <div class="spinner-border" role="status">
+  //         <span class="sr-only">Loading...</span>
+  //       </div>
+  //     `;
+  //     // Optionally disable the button to prevent double submissions
+  //     uploadBtn.disabled = true;
+  //   });
+  // }-->{% endcomment %}
 <iframe id="download-target" name="download-target" style="display:none;"></iframe>
 <script>
   // Handle editable table and XML download
   document.addEventListener('DOMContentLoaded', function () {
-
-    // const uploadForm = document.getElementById('upload-form');
-    // const uploadBtn = document.getElementById('upload-btn');
-    // if (uploadForm && uploadBtn) {
-    //   uploadForm.addEventListener('submit', function () {
-    //     // Replace the button content with a spinner
-    //     uploadBtn.innerHTML = `
-    //       <div class="spinner-border" role="status">
-    //         <span class="sr-only">Loading...</span>
-    //       </div>
-    //     `;
-    //     // Optionally disable the button to prevent double submissions
-    //     uploadBtn.disabled = true;
-    //   });
-    // }
 
     const downloadBtn = document.getElementById('download-xml-btn');
     const trancheSelector = document.getElementById('tranche-selector');

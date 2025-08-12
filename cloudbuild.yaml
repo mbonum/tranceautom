@@ -1,0 +1,78 @@
+steps:
+  # 1. Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Build
+    args:
+      - 'build'
+      - '-t'
+      - '${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+      - '.'
+
+  # 2. Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    id: Push
+    args:
+      - 'push'
+      - '${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+
+  # 3. Create or update the Cloud Run migration job
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Update Migration Job'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'jobs'
+      - 'update'
+      - '${_SERVICE_NAME}-migrate'
+      - '--image=${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+      - '--region=${_DEPLOY_REGION}'
+      - '--set-secrets=DATABASE_URL=${_DATABASE_URL_SECRET}:latest'
+      - '--set-cloudsql-instances=${_DB_INSTANCE}'
+      - '--update-env-vars=IS_MIGRATION_JOB=True'
+      - '--task-timeout=600' # 10 minutes for migrations
+
+  # 4. Run the database migration job and wait for it to complete
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Run Migration'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'jobs'
+      - 'execute'
+      - '${_SERVICE_NAME}-migrate'
+      - '--region=${_DEPLOY_REGION}'
+      - '--wait'
+
+  # 5. Deploy the application to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: Deploy
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+      - '--region=${_DEPLOY_REGION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated' # Set to --no-allow-unauthenticated for private services
+      - '--port=8080'
+      - '--set-secrets=DATABASE_URL=${_DATABASE_URL_SECRET}:latest,SECRET_KEY=${_DJANGO_SECRET_KEY_SECRET}:latest,OKTA_ISSUER=https://calzedoniagroup.oktapreview.com,OKTA_CLIENT_ID=0oaewm6f4zlJZRYbg1d7,OKTA_CLIENT_SECRET=Lrm-IFm4SaFeD_WgBRSY03kCmzoSzATFnCMVuKjowhnHfOCofBKxgROUfTRtYY1O'
+      # - '--set-cloudsql-instances=${_DB_INSTANCE}'
+      - '--update-env-vars=DJANGO_SETTINGS_MODULE=tranceautom.settings,DEBUG=False'
+
+# Store the built image in Artifact Registry for deployment
+images:
+  - '${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+
+# Define substitution variables that can be configured in the Cloud Build trigger
+substitutions:
+  _SERVICE_NAME: 'tranceautom-app'
+  _GOOGLE_CLOUD_PROJECT: clz-tmp-innovation-dev
+  _DEPLOY_REGION: 'europe-west3'
+  _GCR_HOSTNAME: 'europe-west3-docker.pkg.dev'
+  _REPO_NAME: 'tranche-autom' # The name of your Artifact Registry repository
+  # _DB_INSTANCE: 'your-project-id:your-region:your-instance-name' # The Cloud SQL instance connection name
+  # _DATABASE_URL_SECRET: 'DATABASE_URL' # The name of the secret in Secret Manager containing the database URL
+  _DJANGO_SECRET_KEY_SECRET: 'ob1+o+&*^x6=atwqc9i7ooz9=%j019cm+)y7w3-vu$vjow%$!h'
+# Set a timeout for the entire build
+timeout: '1800s'
