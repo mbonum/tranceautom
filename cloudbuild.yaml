@@ -36,7 +36,7 @@ steps:
       - '${_SERVICE_NAME}-migrate'
       - '--image=${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
       - '--region=${_DEPLOY_REGION}'
-      - '--set-secrets=DATABASE_URL=${_DATABASE_URL_SECRET}:latest'
+      - '--set-secrets=DATABASE_URL=${_DATABASE_URL_SECRET_NAME}:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
       - '--update-env-vars=IS_MIGRATION_JOB=True'
       - '--task-timeout=600' # 10 minutes for migrations
@@ -67,9 +67,8 @@ steps:
       - '--allow-unauthenticated' # Set to --no-allow-unauthenticated for private services
       - '--port=8080'
       - '--set-secrets=SECRET_KEY=${_DJANGO_SECRET_KEY_SECRET_NAME}:latest,OKTA_ISSUER=${_OKTA_ISSUER_SECRET_NAME}:latest,OKTA_CLIENT_ID=${_OKTA_CLIENT_ID_SECRET_NAME}:latest,OKTA_CLIENT_SECRET=${_OKTA_CLIENT_SECRET_NAME}:latest'
-      # The DATABASE_URL secret was commented out in your original file, uncomment if needed
-      # - '--set-secrets=DATABASE_URL=${_DATABASE_URL_SECRET}:latest'
-      # - '--set-cloudsql-instances=${_DB_INSTANCE}'
+      - '--set-secrets=DATABASE_URL=${_DATABASE_URL_SECRET_NAME}:latest'
+      - '--set-cloudsql-instances=${_DB_INSTANCE}'
       - '--update-env-vars=DJANGO_SETTINGS_MODULE=tranceautom.settings,DEBUG=False'
 
 # Store the built image in Artifact Registry for deployment
@@ -86,8 +85,8 @@ substitutions:
   _OKTA_ISSUER_SECRET_NAME: 'okta-issuer'
   _OKTA_CLIENT_ID_SECRET_NAME: 'okta-client-id'
   _OKTA_CLIENT_SECRET_NAME: 'okta-client-secret'
-  # _DB_INSTANCE: 'your-project-id:your-region:your-instance-name' # The Cloud SQL instance connection name
-  # _DATABASE_URL_SECRET: 'DATABASE_URL' # The name of the secret in Secret Manager containing the database URL
+  _DB_INSTANCE: 'your-project-id:your-region:your-instance-name' # The Cloud SQL instance connection name
+  _DATABASE_URL_SECRET_NAME: 'DATABASE_URL' # The name of the secret in Secret Manager containing the database URL
 
 # Set a timeout for the entire build
 timeout: '1800s'
