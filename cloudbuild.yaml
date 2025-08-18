@@ -27,12 +27,12 @@ steps:
 
   # 3. Create or update the Cloud Run migration job
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    id: 'Update Migration Job'
+    id: 'Deploy Migration Job'
     entrypoint: gcloud
     args:
       - 'run'
       - 'jobs'
-      - 'update'
+      - 'deploy'
       - '${_SERVICE_NAME}-migrate'
       - '--image=${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
       - '--region=${_DEPLOY_REGION}'
