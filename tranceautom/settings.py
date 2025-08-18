@@ -28,6 +28,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 env = environ.Env(DEBUG=(bool, False))
 
 SECRET_KEY = env("SECRET_KEY")
+DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]  # ['app-xyz.a.run.app', 'gcp-url']
 
@@ -79,12 +80,10 @@ WSGI_APPLICATION = "tranceautom.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+# Use django-environ to automatically configure the database.
+# This will use the DATABASE_URL environment variable if it is set (in Cloud Run),
+# otherwise it will fall back to the local SQLite database for development.
+DATABASES = {"default": env.db_url(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")}
 
 AUTHENTICATION_BACKENDS = [
     "social_core.backends.okta.OktaOAuth2",  # Okta authentication
@@ -94,7 +93,9 @@ AUTHENTICATION_BACKENDS = [
 # Okta configuration
 SOCIAL_AUTH_OKTA_OAUTH2_KEY = env("OKTA_CLIENT_ID")
 SOCIAL_AUTH_OKTA_OAUTH2_SECRET = env("OKTA_CLIENT_SECRET")
-SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER")  # + "/oauth2/default"
+# The issuer URL often needs the authorization server path.
+# Verify this path in your Okta admin console under API > Authorization Servers.
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER") + "/oauth2/default"
 
 # Optional: User creation settings
 SOCIAL_AUTH_USER_MODEL = "auth.User"
@@ -174,14 +175,16 @@ SESSION_COOKIE_AGE = 3600  # 1 hour
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True
 
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# For local development (DEBUG=True), these should be False to allow
+# login over HTTP. In production (DEBUG=False), they should be True.
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
 
 MESSAGE_TAGS = {
     messages.DEBUG: "secondary",
