@@ -76,3 +76,7 @@ substitutions:
   _DJANGO_SECRET_KEY_SECRET: 'ob1+o+&*^x6=atwqc9i7ooz9=%j019cm+)y7w3-vu$vjow%$!h'
 # Set a timeout for the entire build
 timeout: '1800s'
+
+# Configure logging to only use Cloud Logging
+options:
+  logging: CLOUD_LOGGING_ONLY
