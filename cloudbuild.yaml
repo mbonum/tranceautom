@@ -78,7 +78,7 @@ images:
 
 # Define substitution variables that can be configured in the Cloud Build trigger
 substitutions:
-  _SERVICE_NAME: 'tranceautom-app'
+  _SERVICE_NAME: 'tranche-autom'
   _DEPLOY_REGION: 'europe-west3'
   _GCR_HOSTNAME: 'europe-west3-docker.pkg.dev'
   _REPO_NAME: 'tranche-autom' # The name of your Artifact Registry repository
