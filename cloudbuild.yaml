@@ -2,17 +2,8 @@ steps:
   # 1. Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     id: Build
-    secretEnv: ['_SECRET_KEY', '_OKTA_CLIENT_ID', '_OKTA_CLIENT_SECRET', '_OKTA_ISSUER']
     args:
       - 'build'
-      - '--build-arg'
-      - 'SECRET_KEY=${_SECRET_KEY}' # Pass the secret as a build argument
-      - '--build-arg'
-      - 'OKTA_CLIENT_ID=${_OKTA_CLIENT_ID}'
-      - '--build-arg'
-      - 'OKTA_CLIENT_SECRET=${_OKTA_CLIENT_SECRET}'
-      - '--build-arg'
-      - 'OKTA_ISSUER=${_OKTA_ISSUER}'
       - '-t'
       - '${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
       - '.'
@@ -84,18 +75,6 @@ substitutions:
 
 # Set a timeout for the entire build
 timeout: '1800s'
-
-# Make secrets from Secret Manager available to the build
-availableSecrets:
-  secretManager:
-  - versionName: projects/${PROJECT_ID}/secrets/django-secret-key/versions/latest
-    env: '_SECRET_KEY'
-  - versionName: projects/${PROJECT_ID}/secrets/okta-client-id/versions/latest
-    env: '_OKTA_CLIENT_ID'
-  - versionName: projects/${PROJECT_ID}/secrets/okta-client-secret/versions/latest
-    env: '_OKTA_CLIENT_SECRET'
-  - versionName: projects/${PROJECT_ID}/secrets/okta-issuer/versions/latest
-    env: '_OKTA_ISSUER'
 
 # Configure logging to only use Cloud Logging
 options:

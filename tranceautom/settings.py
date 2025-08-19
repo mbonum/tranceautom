@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 import environ
 import logging
 
@@ -84,6 +84,21 @@ WSGI_APPLICATION = "tranceautom.wsgi.application"
 # This will use the DATABASE_URL environment variable if it is set (in Cloud Run),
 # otherwise it will fall back to the local SQLite database for development.
 DATABASES = {"default": env.db_url(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")}
+DATABASE_URL = env.db_url(
+    "DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+)
+DATABASES = {"default": DATABASE_URL}
+# if os.environ.get("DATABASE_URL"):
+#     DATABASES = {"default": env.db_url("DATABASE_URL")}
+# else:
+#     # Fallback for local development
+#     DATABASES = {
+#         "default": {
+#             "ENGINE": "django.db.backends.sqlite3",
+#             "NAME": BASE_DIR / "db.sqlite3",
+#         }
+#     }
+
 
 AUTHENTICATION_BACKENDS = [
     "social_core.backends.okta.OktaOAuth2",  # Okta authentication

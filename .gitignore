@@ -7,3 +7,4 @@ backup
 staticfiles
 media
 *.copy
+db.sqlite3
