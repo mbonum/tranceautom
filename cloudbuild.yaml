@@ -29,8 +29,21 @@ steps:
       - '--region=${_DEPLOY_REGION}'
       - '--set-secrets=DATABASE_URL=DATABASE_URL:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
-      - '--update-env-vars=IS_MIGRATION_JOB=True'
-      - '--task-timeout=600' # 10 minutes for migrations
+      - '--update-env-vars=IS_MIGRATION_JOB=True,DJANGO_SETTINGS_MODULE=tranceautom.settings,ALLOWED_HOSTS=*'
+      - '--task-timeout=600'
+      - '--memory=1Gi'
+      - '--cpu=1'
+      - '--max-retries=1'
+      # - 'run'
+      # - 'jobs'
+      # - 'deploy'
+      # - '${_SERVICE_NAME}-migrate'
+      # - '--image=${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
+      # - '--region=${_DEPLOY_REGION}'
+      # - '--set-secrets=DATABASE_URL=DATABASE_URL:latest'
+      # - '--set-cloudsql-instances=${_DB_INSTANCE}'
+      # - '--update-env-vars=IS_MIGRATION_JOB=True'
+      # - '--task-timeout=600' # 10 minutes for migrations
 
   # 4. Run the database migration job and wait for it to complete
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -59,7 +72,7 @@ steps:
       - '--port=8080'
       - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_URL=DATABASE_URL:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
-      - '--update-env-vars=DJANGO_SETTINGS_MODULE=tranceautom.settings,DEBUG=False'
+      - '--update-env-vars=DJANGO_SETTINGS_MODULE=tranceautom.settings,DEBUG=False,ALLOWED_HOSTS=*'
 
 # Store the built image in Artifact Registry for deployment
 images:

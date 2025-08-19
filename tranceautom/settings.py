@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+
 import os
 import environ
 import logging
@@ -28,9 +29,27 @@ environ.Env.read_env(BASE_DIR / ".env")
 env = environ.Env(DEBUG=(bool, False))
 
 SECRET_KEY = env("SECRET_KEY")
-DEBUG = env("DEBUG")
+DEBUG = env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = ["127.0.0.1", "localhost"]  # ['app-xyz.a.run.app', 'gcp-url']
+ALLOWED_HOSTS = ["*"]
+# if "ALLOWED_HOSTS" in os.environ:
+#     ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
+# else:
+#     # Environment-specific defaults
+#     if DEBUG:
+#         # Development
+#         ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
+#     elif "GOOGLE_CLOUD_PROJECT" in os.environ:
+#         # Production on Cloud Run
+#         ALLOWED_HOSTS = ["*"]  # You should replace this with your actual domain
+#     else:
+#         # Default fallback
+#         ALLOWED_HOSTS = ["*"]
+
+# ALLOWED_HOSTS = [
+#     "127.0.0.1",
+#     "localhost",
+# ]  # ['app-xyz.a.run.app', 'gcp-url']
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -207,4 +226,37 @@ MESSAGE_TAGS = {
     messages.SUCCESS: "success",
     messages.WARNING: "warning",
     messages.ERROR: "danger",
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "INFO" if DEBUG else "WARNING",
+            "propagate": False,
+        },
+    },
 }
