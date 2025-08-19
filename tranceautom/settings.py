@@ -17,6 +17,9 @@ import logging
 # import os
 from pathlib import Path
 from django.contrib.messages import constants as messages
+from google.cloud.sql.connector import Connector
+# import sqlalchemy
+
 # import google.auth
 # from google.cloud import secretmanager
 
@@ -96,12 +99,29 @@ TEMPLATES = [
 WSGI_APPLICATION = "tranceautom.wsgi.application"
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+def getconn():
+    with Connector() as connector:
+        conn = connector.connect(
+            "clz-tmp-innovation-dev:europe-west3:tranche-autom-db",
+            "pg8000",
+            user="tranche-autom-admin",
+            password=os.getenv("DB_PASSWORD"),
+            db="tranche_autom",
+        )
+        return conn
 
-# Use django-environ to automatically configure the database.
-# This will use the DATABASE_URL environment variable if it is set (in Cloud Run),
-# otherwise it will fall back to the local SQLite database for development.
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "tranche_autom",
+        "USER": "tranche-autom-admin",
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": "",  # Connector handles this
+        "PORT": "",
+        "OPTIONS": {"connection_factory": getconn},
+    }
+}
 print(f"DATABASE_URL in environment: {'DATABASE_URL' in os.environ}")
 if "DATABASE_URL" in os.environ:
     database_url = os.environ.get("DATABASE_URL", "")

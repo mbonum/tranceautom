@@ -61,7 +61,7 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated' # Set to --no-allow-unauthenticated for private services
       - '--port=8080'
-      - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_URL=DATABASE_URL:latest'
+      - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_URL=DATABASE_URL:latest,DB_PASSWORD=DB_PASSWORD:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
       # Use a specific ALLOWED_HOSTS value for better security.
       # This should be configured in your Cloud Build trigger substitutions.
