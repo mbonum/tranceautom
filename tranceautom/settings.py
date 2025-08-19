@@ -106,7 +106,7 @@ print(f"DATABASE_URL in environment: {'DATABASE_URL' in os.environ}")
 if "DATABASE_URL" in os.environ:
     database_url = os.environ.get("DATABASE_URL", "")
     print(
-        f"DATABASE_URL value: {database_url[:50]}..."
+        f"DATABASE_URL value: {database_url[:20]}..."
     )  # Only show first 50 chars for security
 
 try:

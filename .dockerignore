@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+*.egg-info/
+
+# Local settings & IDE
+.env
+db.sqlite3
+.idea/
+.vscode/

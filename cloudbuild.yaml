@@ -29,21 +29,12 @@ steps:
       - '--region=${_DEPLOY_REGION}'
       - '--set-secrets=DATABASE_URL=DATABASE_URL:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
+      # Use a permissive ALLOWED_HOSTS for the migration job, as it's not user-facing.
       - '--update-env-vars=IS_MIGRATION_JOB=True,DJANGO_SETTINGS_MODULE=tranceautom.settings,ALLOWED_HOSTS=*'
-      - '--task-timeout=600'
+      - '--task-timeout=600s' # 10 minutes
       - '--memory=1Gi'
       - '--cpu=1'
       - '--max-retries=1'
-      # - 'run'
-      # - 'jobs'
-      # - 'deploy'
-      # - '${_SERVICE_NAME}-migrate'
-      # - '--image=${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
-      # - '--region=${_DEPLOY_REGION}'
-      # - '--set-secrets=DATABASE_URL=DATABASE_URL:latest'
-      # - '--set-cloudsql-instances=${_DB_INSTANCE}'
-      # - '--update-env-vars=IS_MIGRATION_JOB=True'
-      # - '--task-timeout=600' # 10 minutes for migrations
 
   # 4. Run the database migration job and wait for it to complete
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -72,7 +63,9 @@ steps:
       - '--port=8080'
       - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_URL=DATABASE_URL:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
-      - '--update-env-vars=DJANGO_SETTINGS_MODULE=tranceautom.settings,DEBUG=False,ALLOWED_HOSTS=*'
+      # Use a specific ALLOWED_HOSTS value for better security.
+      # This should be configured in your Cloud Build trigger substitutions.
+      - '--update-env-vars=DJANGO_SETTINGS_MODULE=tranceautom.settings,DEBUG=False,ALLOWED_HOSTS=${_ALLOWED_HOSTS}'
 
 # Store the built image in Artifact Registry for deployment
 images:
@@ -85,6 +78,9 @@ substitutions:
   _GCR_HOSTNAME: 'europe-west3-docker.pkg.dev'
   _REPO_NAME: 'tranche-autom' # The name of your Artifact Registry repository
   _DB_INSTANCE: 'clz-tmp-innovation-dev:europe-west3:tranche-autom-db' # IMPORTANT: Replace with your actual Cloud SQL instance connection name
+  # Add your service's domain(s) here, comma-separated.
+  # e.g., 'tranche-autom-xyz.a.run.app,your-custom-domain.com'
+  _ALLOWED_HOSTS: 'tranche-autom-xyz.a.run.app'
 
 # Set a timeout for the entire build
 timeout: '1800s'
