@@ -102,11 +102,105 @@ WSGI_APPLICATION = "tranceautom.wsgi.application"
 # Use django-environ to automatically configure the database.
 # This will use the DATABASE_URL environment variable if it is set (in Cloud Run),
 # otherwise it will fall back to the local SQLite database for development.
-DATABASES = {"default": env.db_url(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")}
-DATABASE_URL = env.db_url(
-    "DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
-)
-DATABASES = {"default": DATABASE_URL}
+print(f"DATABASE_URL in environment: {'DATABASE_URL' in os.environ}")
+if "DATABASE_URL" in os.environ:
+    database_url = os.environ.get("DATABASE_URL", "")
+    print(
+        f"DATABASE_URL value: {database_url[:50]}..."
+    )  # Only show first 50 chars for security
+
+try:
+    if "DATABASE_URL" in os.environ and os.environ.get("DATABASE_URL"):
+        # Parse DATABASE_URL using django-environ
+        DATABASES = {"default": env.db_url("DATABASE_URL")}
+
+        # Ensure proper settings for PostgreSQL
+        if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+            DATABASES["default"].update(
+                {
+                    "CONN_MAX_AGE": 60,
+                    "OPTIONS": {
+                        "connect_timeout": 10,
+                    },
+                }
+            )
+
+        print(f"Database ENGINE: {DATABASES['default']['ENGINE']}")
+        print(f"Database NAME: {DATABASES['default']['NAME']}")
+        print("✅ Successfully configured database from DATABASE_URL")
+
+    else:
+        # Fallback for local development
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
+        print("📝 Using SQLite fallback database")
+
+except Exception as e:
+    print(f"❌ Database configuration error: {e}")
+    print(f"Exception type: {type(e).__name__}")
+
+    # Manual fallback configuration for Cloud SQL
+    if "DATABASE_URL" in os.environ:
+        database_url = os.environ.get("DATABASE_URL", "")
+        print("Attempting manual database URL parsing...")
+
+        # Manual parsing as fallback
+        if database_url.startswith("postgresql://"):
+            # Extract components manually
+            import re
+
+            match = re.match(
+                r"postgresql://([^:]+):([^@]+)@([^/]+)/([^?]+)(\?.*)?", database_url
+            )
+            if match:
+                user, password, host_part, dbname = match.groups()[:4]
+
+                DATABASES = {
+                    "default": {
+                        "ENGINE": "django.db.backends.postgresql",
+                        "NAME": dbname,
+                        "USER": user,
+                        "PASSWORD": password,
+                        "HOST": host_part
+                        if not host_part.startswith("/cloudsql/")
+                        else "",
+                        "PORT": "5432",
+                        "OPTIONS": {
+                            "connect_timeout": 10,
+                        },
+                    }
+                }
+
+                # Handle Cloud SQL socket connection
+                if "?host=/cloudsql/" in database_url:
+                    socket_path = database_url.split("?host=")[1].split("&")[0]
+                    DATABASES["default"]["HOST"] = socket_path
+                    DATABASES["default"]["PORT"] = ""
+
+                print("✅ Manual database configuration successful")
+            else:
+                print("❌ Failed to parse DATABASE_URL manually")
+                raise Exception("Could not parse DATABASE_URL")
+
+    # Final fallback to SQLite
+    if "DATABASES" not in locals() or not DATABASES:
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
+        print("🔄 Using final SQLite fallback")
+
+# DATABASES = {"default": env.db_url(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")}
+# DATABASE_URL = env.db_url(
+#     "DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+# )
+# DATABASES = {"default": DATABASE_URL}
 # if os.environ.get("DATABASE_URL"):
 #     DATABASES = {"default": env.db_url("DATABASE_URL")}
 # else:
