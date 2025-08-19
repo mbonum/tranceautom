@@ -561,16 +561,16 @@ def generate_xml_content(edited_data, original_filename, username, tranche_name)
     )
 
     # Add metadata
-    xml_lines.append("  <metadata>")
-    xml_lines.append(f"    <total_rows>{len(edited_data)}</total_rows>")
-    xml_lines.append(
-        f"    <total_columns>{len(edited_data[0]) if edited_data else 0}</total_columns>"
-    )
-    xml_lines.append(
-        f"    <generated_at>{pd.Timestamp.now().isoformat()}</generated_at>"
-    )
-    xml_lines.append(f"    <user>{escape_xml(username)}</user>")
-    xml_lines.append("  </metadata>")
+    # xml_lines.append("  <metadata>")
+    # xml_lines.append(f"    <total_rows>{len(edited_data)}</total_rows>")
+    # xml_lines.append(
+    #     f"    <total_columns>{len(edited_data[0]) if edited_data else 0}</total_columns>"
+    # )
+    # xml_lines.append(
+    #     f"    <generated_at>{pd.Timestamp.now().isoformat()}</generated_at>"
+    # )
+    # xml_lines.append(f"    <user>{escape_xml(username)}</user>")
+    # xml_lines.append("  </metadata>")
 
     if not edited_data:
         xml_lines.append("  <Product></Product>")
