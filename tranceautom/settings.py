@@ -117,8 +117,8 @@ DATABASES = {
         "NAME": "tranche_autom",
         "USER": "tranche-autom-admin",
         "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": "",  # Connector handles this
-        "PORT": "",
+        "HOST": "10.237.48.3",  # Connector handles this
+        "PORT": "5432",
         "OPTIONS": {"connection_factory": getconn},
     }
 }
