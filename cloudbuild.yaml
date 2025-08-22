@@ -26,7 +26,7 @@ steps:
       - '${_SERVICE_NAME}-migrate'
       - '--image=${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
       - '--region=${_DEPLOY_REGION}'
-      - '--set-secrets=DATABASE_URL=DATABASE_URL:latest,DB_TRANCHE_PASSWORD=DB_TRANCHE_PASSWORD:latest'
+      - '--set-secrets=DATABASE_TRANCHE_URL=DATABASE_TRANCHE_URL:latest,DB_TRANCHE_PASSWORD=DB_TRANCHE_PASSWORD:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
       - '--vpc-connector=projects/${PROJECT_ID}/locations/${_DEPLOY_REGION}/connectors/tranche-autom-connector'
       # Use a permissive ALLOWED_HOSTS for the migration job, as it's not user-facing.
@@ -61,7 +61,7 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated' # Set to --no-allow-unauthenticated for private services
       - '--port=8080'
-      - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_URL=DATABASE_URL:latest,DB_TRANCHE_PASSWORD=DB_TRANCHE_PASSWORD:latest'
+      - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_TRANCHE_URL=DATABASE_TRANCHE_URL:latest,DB_TRANCHE_PASSWORD=DB_TRANCHE_PASSWORD:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
       - '--vpc-connector=projects/${PROJECT_ID}/locations/${_DEPLOY_REGION}/connectors/tranche-autom-connector'
       # TODO: Use a specific ALLOWED_HOSTS

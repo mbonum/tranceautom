@@ -108,7 +108,7 @@ WSGI_APPLICATION = "tranceautom.wsgi.application"
 # - If DATABASE_URL is not set, it falls back to a local SQLite database.
 DATABASES = {
     "default": env.db_url(
-        "DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+        "DATABASE_TRANCHE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
     )
 }
 
