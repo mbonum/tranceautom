@@ -10,15 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-import os
+# import os
 import environ
 import logging
 
 # import os
 from pathlib import Path
 from django.contrib.messages import constants as messages
-from google.cloud.sql.connector import Connector
-# import sqlalchemy
 
 # import google.auth
 # from google.cloud import secretmanager
@@ -99,138 +97,30 @@ TEMPLATES = [
 WSGI_APPLICATION = "tranceautom.wsgi.application"
 
 
-def getconn():
-    with Connector() as connector:
-        conn = connector.connect(
-            "clz-tmp-innovation-dev:europe-west3:tranche-autom-db",
-            "pg8000",
-            user="tranche-autom-admin",
-            password=os.getenv("DB_PASSWORD"),
-            db="tranche_autom",
-        )
-        return conn
-
-
+# Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+#
+# This setup uses django-environ to configure the database.
+# - For local development, it reads DATABASE_URL from the .env file, which
+#   should point to the local Cloud SQL Auth Proxy (e.g., postgresql://user:pass@127.0.0.1:5432/db).
+# - In Cloud Run, the DATABASE_URL is injected as a secret and points to the
+#   Unix socket (e.g., postgresql://.../?host=/cloudsql/project:region:instance).
+# - If DATABASE_URL is not set, it falls back to a local SQLite database.
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "tranche_autom",
-        "USER": "tranche-autom-admin",
-        "PASSWORD": os.getenv("DB_PASSWORD"),
-        "HOST": "10.237.48.3",
-        "PORT": "5432",
-        "OPTIONS": {"connection_factory": getconn},
-    }
+    "default": env.db_url(
+        "DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+    )
 }
-print(f"DATABASE_URL in environment: {'DATABASE_URL' in os.environ}")
-if "DATABASE_URL" in os.environ:
-    database_url = os.environ.get("DATABASE_URL", "")
-    print(
-        f"DATABASE_URL value: {database_url[:20]}..."
-    )  # Only show first 50 chars for security
 
-try:
-    if "DATABASE_URL" in os.environ and os.environ.get("DATABASE_URL"):
-        # Parse DATABASE_URL using django-environ
-        DATABASES = {"default": env.db_url("DATABASE_URL")}
-
-        # Ensure proper settings for PostgreSQL
-        if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
-            DATABASES["default"].update(
-                {
-                    "CONN_MAX_AGE": 60,
-                    "OPTIONS": {
-                        "connect_timeout": 10,
-                    },
-                }
-            )
-
-        print(f"Database ENGINE: {DATABASES['default']['ENGINE']}")
-        print(f"Database NAME: {DATABASES['default']['NAME']}")
-        print("✅ Successfully configured database from DATABASE_URL")
-
-    else:
-        # Fallback for local development
-        DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.sqlite3",
-                "NAME": BASE_DIR / "db.sqlite3",
-            }
-        }
-        print("📝 Using SQLite fallback database")
-
-except Exception as e:
-    print(f"❌ Database configuration error: {e}")
-    print(f"Exception type: {type(e).__name__}")
-
-    # Manual fallback configuration for Cloud SQL
-    if "DATABASE_URL" in os.environ:
-        database_url = os.environ.get("DATABASE_URL", "")
-        print("Attempting manual database URL parsing...")
-
-        # Manual parsing as fallback
-        if database_url.startswith("postgresql://"):
-            # Extract components manually
-            import re
-
-            match = re.match(
-                r"postgresql://([^:]+):([^@]+)@([^/]+)/([^?]+)(\?.*)?", database_url
-            )
-            if match:
-                user, password, host_part, dbname = match.groups()[:4]
-
-                DATABASES = {
-                    "default": {
-                        "ENGINE": "django.db.backends.postgresql",
-                        "NAME": dbname,
-                        "USER": user,
-                        "PASSWORD": password,
-                        "HOST": host_part
-                        if not host_part.startswith("/cloudsql/")
-                        else "",
-                        "PORT": "5432",
-                        "OPTIONS": {
-                            "connect_timeout": 10,
-                        },
-                    }
-                }
-
-                # Handle Cloud SQL socket connection
-                if "?host=/cloudsql/" in database_url:
-                    socket_path = database_url.split("?host=")[1].split("&")[0]
-                    DATABASES["default"]["HOST"] = socket_path
-                    DATABASES["default"]["PORT"] = ""
-
-                print("✅ Manual database configuration successful")
-            else:
-                print("❌ Failed to parse DATABASE_URL manually")
-                raise Exception("Could not parse DATABASE_URL")
-
-    # Final fallback to SQLite
-    if "DATABASES" not in locals() or not DATABASES:
-        DATABASES = {
-            "default": {
-                "ENGINE": "django.db.backends.sqlite3",
-                "NAME": BASE_DIR / "db.sqlite3",
-            }
-        }
-        print("🔄 Using final SQLite fallback")
-
-# DATABASES = {"default": env.db_url(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")}
-# DATABASE_URL = env.db_url(
-#     "DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
-# )
-# DATABASES = {"default": DATABASE_URL}
-# if os.environ.get("DATABASE_URL"):
-#     DATABASES = {"default": env.db_url("DATABASE_URL")}
-# else:
-#     # Fallback for local development
-#     DATABASES = {
-#         "default": {
-#             "ENGINE": "django.db.backends.sqlite3",
-#             "NAME": BASE_DIR / "db.sqlite3",
-#         }
-#     }
+# Optional: Add connection pooling and other options for PostgreSQL
+if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    DATABASES["default"].setdefault("OPTIONS", {})["connect_timeout"] = 10
+    # DATABASES["default"]["OPTIONS"] = {
+    #     "connect_timeout": 10,
+    #     "sslmode": "disable",  # Optional, as private IP doesn't require SSL
+    # }
+    DATABASES["default"]["CONN_MAX_AGE"] = 600
+    # DATABASES["default"]["OPTIONS"] = {"pool": True}
 
 
 AUTHENTICATION_BACKENDS = [
@@ -345,32 +235,15 @@ MESSAGE_TAGS = {
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
-            "style": "{",
-        },
-    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
         },
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": "INFO",
     },
     "loggers": {
-        "django": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
         "django.db.backends": {
+            "level": "DEBUG",
             "handlers": ["console"],
-            "level": "INFO" if DEBUG else "WARNING",
-            "propagate": False,
         },
     },
 }

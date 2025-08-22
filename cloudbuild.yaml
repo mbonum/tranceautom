@@ -8,7 +8,6 @@ steps:
       - '${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
       - '.'
 
-
   # 2. Push the container image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: Push
@@ -27,10 +26,11 @@ steps:
       - '${_SERVICE_NAME}-migrate'
       - '--image=${_GCR_HOSTNAME}/${PROJECT_ID}/${_REPO_NAME}/${_SERVICE_NAME}:${COMMIT_SHA}'
       - '--region=${_DEPLOY_REGION}'
-      - '--set-secrets=DATABASE_URL=DATABASE_URL:latest'
+      - '--set-secrets=DATABASE_URL=DATABASE_URL:latest,DB_TRANCHE_PASSWORD=DB_TRANCHE_PASSWORD:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
+      - '--vpc-connector=projects/${PROJECT_ID}/locations/${_DEPLOY_REGION}/connectors/tranche-autom-connector'
       # Use a permissive ALLOWED_HOSTS for the migration job, as it's not user-facing.
-      - '--update-env-vars=IS_MIGRATION_JOB=True,DJANGO_SETTINGS_MODULE=tranceautom.settings,ALLOWED_HOSTS=*'
+      - '--update-env-vars=IS_MIGRATION_JOB=True,DJANGO_SETTINGS_MODULE=tranceautom.settings,ALLOWED_HOSTS=["*"]'
       - '--task-timeout=600s' # 10 minutes
       - '--memory=1Gi'
       - '--cpu=1'
@@ -61,10 +61,10 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated' # Set to --no-allow-unauthenticated for private services
       - '--port=8080'
-      - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_URL=DATABASE_URL:latest,DB_PASSWORD=DB_PASSWORD:latest'
+      - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_URL=DATABASE_URL:latest,DB_TRANCHE_PASSWORD=DB_TRANCHE_PASSWORD:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
-      # TODO: Use a specific ALLOWED_HOSTS value for better security.
-      # This should be configured in your Cloud Build trigger substitutions.${_ALLOWED_HOSTS}
+      - '--vpc-connector=projects/${PROJECT_ID}/locations/${_DEPLOY_REGION}/connectors/tranche-autom-connector'
+      # TODO: Use a specific ALLOWED_HOSTS
       - '--update-env-vars=DJANGO_SETTINGS_MODULE=tranceautom.settings,DEBUG=False,ALLOWED_HOSTS=["*"]'
 
 # Store the built image in Artifact Registry for deployment
@@ -82,7 +82,7 @@ substitutions:
   # e.g., 'tranche-autom-xyz.a.run.app,your-custom-domain.com'
   # _ALLOWED_HOSTS: 'tranche-autom-xyz.a.run.app'
 
-# Set a timeout for the entire build
+# Timeout for the entire build
 timeout: '1800s'
 
 # Configure logging to only use Cloud Logging
