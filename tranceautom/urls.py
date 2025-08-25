@@ -12,7 +12,9 @@ from upload_file.views import (
     download_xml,
     # process_excel_to_csv,
 )
-from django.views.static import serve
+# from django.views.static import serve
+from django.contrib.staticfiles.storage import staticfiles_storage
+from django.views.generic.base import RedirectView
 
 
 def chrome_devtools_stub(request):
@@ -30,10 +32,13 @@ urlpatterns = [
     # path("download-csv/", download_csv, name="download_csv"),
     path("download-xml/", download_xml, name="download_xml"),
     path(
-        "favicon.ico",
-        serve,
-        {"path": "favicon.ico", "document_root": settings.STATIC_ROOT},
+        "favicon.ico", RedirectView.as_view(url=staticfiles_storage.url("favicon.ico"))
     ),
+    # path(
+    #     "favicon.ico",
+    #     serve,
+    #     {"path": "favicon.ico", # "document_root": settings.STATIC_ROOT},
+    # ),
     path("admin/", admin.site.urls),
 ]
 
