@@ -32,25 +32,7 @@ env = environ.Env(DEBUG=(bool, False))
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = ["*"]
-# if "ALLOWED_HOSTS" in os.environ:
-#     ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
-# else:
-#     # Environment-specific defaults
-#     if DEBUG:
-#         # Development
-#         ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
-#     elif "GOOGLE_CLOUD_PROJECT" in os.environ:
-#         # Production on Cloud Run
-#         ALLOWED_HOSTS = ["*"]  # You should replace this with your actual domain
-#     else:
-#         # Default fallback
-#         ALLOWED_HOSTS = ["*"]
-
-# ALLOWED_HOSTS = [
-#     "127.0.0.1",
-#     "localhost",
-# ]  # ['app-xyz.a.run.app', 'gcp-url']
+ALLOWED_HOSTS = ["tranche-autom-895419303996.europe-west3.run.app", "tranche-autom-hopp43txpa-ey.a.run.app", "localhost", "127.0.0.1"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -61,7 +43,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "upload_file",
     "social_django",
-    # "preview_xml",
 ]
 
 MIDDLEWARE = [
@@ -108,7 +89,8 @@ WSGI_APPLICATION = "tranceautom.wsgi.application"
 # - If DATABASE_URL is not set, it falls back to a local SQLite database.
 DATABASES = {
     "default": env.db_url(
-        "DATABASE_TRANCHE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"
+        "DATABASE_TRANCHE_URL",
+        default=f"sqlite:///{ (BASE_DIR / 'db.sqlite3').as_posix() }",
     )
 }
 
@@ -223,6 +205,11 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_HSTS_SECONDS = 0 if DEBUG else 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SECURE_HSTS_PRELOAD = not DEBUG
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://tranche-autom-895419303996.europe-west3.run.app",
+    "https://tranche-autom-hopp43txpa-ey.a.run.app",
+]
 
 MESSAGE_TAGS = {
     messages.DEBUG: "secondary",

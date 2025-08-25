@@ -64,7 +64,7 @@ steps:
       - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_TRANCHE_URL=DATABASE_TRANCHE_URL:latest,DB_TRANCHE_PASSWORD=DB_TRANCHE_PASSWORD:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
       - '--vpc-connector=projects/${PROJECT_ID}/locations/${_DEPLOY_REGION}/connectors/tranche-autom-connector'
-      # TODO: Use a specific ALLOWED_HOSTS
+      # TODO: Use a specific ALLOWED_HOSTS https://tranche-autom-895419303996.europe-west3.run.app/
       - '--update-env-vars=DJANGO_SETTINGS_MODULE=tranceautom.settings,DEBUG=False,ALLOWED_HOSTS=["*"]'
 
 # Store the built image in Artifact Registry for deployment
@@ -78,9 +78,7 @@ substitutions:
   _GCR_HOSTNAME: 'europe-west3-docker.pkg.dev'
   _REPO_NAME: 'tranche-autom' # The name of your Artifact Registry repository
   _DB_INSTANCE: 'clz-tmp-innovation-dev:europe-west3:tranche-autom-db' # IMPORTANT: Replace with your actual Cloud SQL instance connection name
-  # Add your service's domain(s) here, comma-separated.
-  # e.g., 'tranche-autom-xyz.a.run.app,your-custom-domain.com'
-  # _ALLOWED_HOSTS: 'tranche-autom-xyz.a.run.app'
+  _ALLOWED_HOSTS: 'tranche-autom-hopp43txpa-ey.a.run.app,tranche-autom-895419303996.europe-west3.run.app'
 
 # Timeout for the entire build
 timeout: '1800s'
