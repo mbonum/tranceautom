@@ -1,367 +1,556 @@
+"""
+Refactored views for Tranche Automation
+Focused on API endpoints and user interface, with business logic delegated to specialized modules
+"""
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
-from django.shortcuts import render, redirect, reverse
-import csv
-import logging
-
-# import io
-import json
+from django.shortcuts import render, redirect  # , reverse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_protect
-import pandas as pd
-from django.http import HttpResponse
-# import openpyxl
-# from datetime import datetime
-# import traceback
-# from io import BytesIO
+from django.http import HttpResponse, JsonResponse
+from django.db import transaction
 
+# import csv
+# import json
+import logging
+
+# from datetime import datetime
+import os
+
+from .models import PianificazioneImport, Prodotto, PaesePianificazione
+from .parsers import ExcelHeaderParser  # , VisibilityColumnParser
+from .processors import (
+    ProductDataProcessor,
+    # CountryPlanningProcessor,
+    # ValidationProcessor,
+    SimpleCountryProcessor,
+)
+from .xml_generator import XMLExportManager
+from .forms import ExcelUploadForm
 
 logger = logging.getLogger(__name__)
 
 
-def validate_csv(file):
-    """Validate CSV file structure and content"""
-    try:
-        file.seek(0)
-        # Try to detect delimiter
-        sample = file.read(1024).decode("utf-8")
-        file.seek(0)
-
-        sniffer = csv.Sniffer()
-        delimiter = sniffer.sniff(sample).delimiter
-
-        # Read CSV with pandas
-        df = pd.read_csv(file, delimiter=delimiter)
-
-        # Basic validation checks
-        if df.empty:
-            return False, "CSV file is empty."
-
-        if len(df.columns) == 0:
-            return False, "CSV file has no columns."
-
-        # Check for unnamed columns (usually indicates malformed CSV)
-        unnamed_cols = [col for col in df.columns if "Unnamed" in str(col)]
-        if len(unnamed_cols) > len(df.columns) / 2:
-            return False, "CSV file appears to be malformed (too many unnamed columns)."
-
-        return True, df
-
-    except UnicodeDecodeError:
-        return False, "CSV file encoding is not supported. Please use UTF-8 encoding."
-    except pd.errors.EmptyDataError:
-        return False, "CSV file is empty or corrupted."
-    except pd.errors.ParserError as e:
-        return False, f"CSV parsing error: {str(e)}"
-    except Exception as e:
-        return False, f"Error validating CSV: {str(e)}"
+# ============================================================================
+# AUTHENTICATION VIEWS
+# ============================================================================
 
 
 def user_login(request):
     """User login view"""
-    if request.user.is_authenticated:
-        return redirect("home")
-
     if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-
-        if username and password:
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                # messages.success(request, f"Welcome back, {user.username}!")
-
-                # Redirect to next page if specified, otherwise to home
-                next_page = request.GET.get("next", "home")
-                return redirect(next_page)
-            else:
-                messages.error(request, "Invalid username or password.")
+        username = request.POST["username"]
+        password = request.POST["password"]
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect("home")
         else:
-            messages.error(request, "Please provide both username and password.")
-
+            messages.error(request, "Invalid username or password.")
     return render(request, "registration/login.html")
 
 
 def user_logout(request):
     """User logout view"""
-    # username = request.user.username if request.user.is_authenticated else None
     logout(request)
-    # if username:
-    # messages.success(request, f"Goodbye, {username}! You have been logged out.")
     return redirect("login")
 
 
 def user_register(request):
     """User registration view"""
-    if request.user.is_authenticated:
-        return redirect("home")
-
     if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            form.save()
             username = form.cleaned_data.get("username")
-            messages.success(
-                request, f"Account created for {username}! You can now log in."
-            )
+            messages.success(request, f"Account was created for {username}!")
             return redirect("login")
-        else:
-            # Add form errors to messages
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
     else:
         form = UserCreationForm()
-
     return render(request, "registration/register.html", {"form": form})
 
 
-# Update your existing home view to require login
+# ============================================================================
+# MAIN APPLICATION VIEWS
+# ============================================================================
+
+
 @login_required
 def home(request):
+    """Main home page with upload functionality"""
+    # Handle file upload
+    if request.method == "POST":
+        return handle_file_upload(request)
+
+    # GET request - show the page
     context = {
-        "error": None,
-        "preview": False,
-        "filename": request.session.get("original_filename"),
-        "tranches": list(request.session.get("tranches_data", {}).keys()),
-        "selected_tranche": None,
-        "table_data": [],
-        "table_headers": [],
+        "recent_imports": _get_recent_imports(request.user),
+        "upload_form": ExcelUploadForm(),
+        "user_plannings": _get_user_plannings(request.user),
     }
-
-    if request.method == "POST" and "file" in request.FILES:
-        # Clear only the data related to a previous file upload, not the whole session.
-        # request.session.flush() would log the user out.
-        for key in ["tranches_data", "original_filename"]:
-            if key in request.session:
-                del request.session[key]
-        try:
-            uploaded_file = request.FILES["file"]
-            if not (
-                uploaded_file.name.lower().endswith(".xlsx")
-                or uploaded_file.name.endswith(".xls")
-            ):
-                context["error"] = "Only Excel files (.xlsx, .xls) are allowed."
-            else:
-                # Handle Excel file
-                uploaded_file.seek(0)
-                xls = pd.ExcelFile(uploaded_file)
-                sheet_to_find = "PIANIFICAZIONE"
-                actual_sheet_name = next(
-                    (s for s in xls.sheet_names if s.lower() == sheet_to_find.lower()),
-                    None,
-                )
-
-                if not actual_sheet_name:
-                    context["error"] = (
-                        f"The Excel file does not contain a sheet named '{sheet_to_find}'."
-                    )
-                else:
-                    df_raw = pd.read_excel(
-                        xls, sheet_name=actual_sheet_name, header=None
-                    )
-                    header_keyword = "chiave articolo colore"
-                    header_row_index = -1
-                    for i, row in df_raw.iterrows():
-                        row_str = " ".join(
-                            str(x) for x in row.values if pd.notna(x)
-                        ).lower()
-                        if header_keyword in row_str:
-                            header_row_index = i
-                            break
-
-                    if header_row_index == -1:
-                        context["error"] = (
-                            f"Could not find the header row containing '{header_keyword}' in sheet '{actual_sheet_name}'."
-                        )
-                    else:
-                        new_header = df_raw.iloc[header_row_index]
-                        df_data = df_raw[header_row_index + 1 :].copy()
-                        df_data.columns = new_header
-                        df_data.dropna(axis=1, how="all", inplace=True)
-
-                        df_data["tranche_group"] = df_data.isnull().all(axis=1).cumsum()
-                        df_data_no_empty = df_data.dropna(how="all").copy()
-
-                        if df_data_no_empty.empty:
-                            context["error"] = "No data found after header."
-                        else:
-                            tranches_dfs = [
-                                group.drop("tranche_group", axis=1)
-                                for _, group in df_data_no_empty.groupby(
-                                    "tranche_group"
-                                )
-                            ]
-                            tranches_data = {}
-                            for i, tranche_df in enumerate(tranches_dfs):
-                                df = tranche_df.copy()
-                                if not df.empty:
-                                    df.dropna(subset=[df.columns[0]], inplace=True)
-
-                                if not df.empty:
-                                    # Add original row number (1-based) as the first column
-                                    df.insert(0, "#", df.index + 1)
-                                    df.reset_index(drop=True, inplace=True)
-                                    df.fillna("", inplace=True)
-
-                                    table_headers = df.columns.tolist()
-                                    table_data = df.astype(str).values.tolist()
-                                    tranche_name = f"Tranche {i + 1}"
-                                    tranches_data[tranche_name] = {
-                                        "headers": table_headers,
-                                        "data": table_data,
-                                    }
-                            if not tranches_data:
-                                context["error"] = "No valid data tranches found."
-                            else:
-                                request.session["tranches_data"] = tranches_data
-                                request.session["original_filename"] = (
-                                    uploaded_file.name
-                                )
-                                first_tranche_name = list(tranches_data.keys())[0]
-                                return redirect(
-                                    f"{reverse('home')}?tranche={first_tranche_name}"
-                                )
-        except Exception as e:
-            context["error"] = f"Could not process the file: {str(e)}"
-            logger.error(f"Error processing file: {str(e)}", exc_info=True)
-
-    tranches_data = request.session.get("tranches_data")
-    if tranches_data:
-        context["preview"] = True
-        selected_tranche_name = request.GET.get("tranche")
-
-        if not selected_tranche_name and context["tranches"]:
-            first_tranche = list(context["tranches"])[0]
-            return redirect(f"{request.path}?tranche={first_tranche}")
-
-        if selected_tranche_name in tranches_data:
-            context["selected_tranche"] = selected_tranche_name
-            tranche_content = tranches_data[selected_tranche_name]
-            context["table_headers"] = tranche_content["headers"]
-            context["table_data"] = tranche_content["data"]
-        elif selected_tranche_name:
-            context["error"] = f"Tranche '{selected_tranche_name}' not found."
-
     return render(request, "home.html", context)
-
-
-def generate_xml_content(edited_data, original_filename, username, tranche_name):
-    """Generate XML content from edited data"""
-
-    def escape_xml(text):
-        """Escape XML special characters"""
-        if text is None:
-            return ""
-        return (
-            str(text)
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace('"', "&quot;")
-            .replace("'", "&apos;")
-        )
-
-    xml_lines = ['<?xml version="1.0" encoding="UTF-8"?>']
-    xml_lines.append(
-        f'<data source_file="{escape_xml(original_filename)}" tranche="{escape_xml(tranche_name)}">'
-    )
-
-    # Add metadata
-    # xml_lines.append("  <metadata>")
-    # xml_lines.append(f"    <total_rows>{len(edited_data)}</total_rows>")
-    # xml_lines.append(
-    #     f"    <total_columns>{len(edited_data[0]) if edited_data else 0}</total_columns>"
-    # )
-    # xml_lines.append(
-    #     f"    <generated_at>{pd.Timestamp.now().isoformat()}</generated_at>"
-    # )
-    # xml_lines.append(f"    <user>{escape_xml(username)}</user>")
-    # xml_lines.append("  </metadata>")
-
-    # Add data rows
-    xml_lines.append("  <records>")
-
-    for i, row in enumerate(edited_data):
-        xml_lines.append(f'    <record id="{i + 1}">')
-
-        for j, cell_value in enumerate(row):
-            safe_value = escape_xml(cell_value) if cell_value else ""
-            xml_lines.append(f"      <column_{j + 1}>{safe_value}</column_{j + 1}>")
-
-        xml_lines.append("    </record>")
-
-    xml_lines.append("  </records>")
-    xml_lines.append("</data>")
-
-    return "\n".join(xml_lines)
 
 
 @login_required
 @require_http_methods(["POST"])
 @csrf_protect
-def download_xml(request):
-    """View to handle XML download with edited data"""
+def handle_file_upload(request):
+    """
+    Handle file upload and processing
+    Delegates actual processing to specialized modules
+    """
     try:
-        edited_data_str = request.POST.get("edited_data", "[]")
-        tranche_name = request.POST.get("tranche_name")
+        if "excel_file" not in request.FILES:
+            messages.error(request, "Please provide a valid Excel file.")
+            return redirect("home")
 
-        if not edited_data_str.strip():
-            logger.warning("Empty edited_data received")
-            return HttpResponse("No data provided.", status=400)
+        uploaded_file = request.FILES["excel_file"]
 
-        if not tranche_name:
-            logger.warning("Tranche name not provided")
-            return HttpResponse("Tranche name not provided.", status=400)
+        # Process Excel file using new architecture
+        result = _process_excel_file(uploaded_file, request.user)
 
+        if result["success"]:
+            messages.success(
+                request,
+                f"File processed successfully! {result['stats']['products']} products imported.",
+            )
+            # Redirect to the planning details page to show results
+            return redirect("planning_details", planning_id=result["planning_id"])
+        else:
+            messages.error(request, f"Error processing file: {result['error']}")
+
+        return redirect("home")
+
+    except Exception as e:
+        logger.error(f"Error in handle_file_upload: {str(e)}", exc_info=True)
+        messages.error(request, f"Server error: {str(e)}")
+        return redirect("home")
+
+
+@login_required
+def download_xml(request):
+    """
+    Generate and download XML for a planning or specific tranche
+    Expects planning_id and optional tranche_name as GET parameters
+    """
+    try:
+        planning_id = request.GET.get("planning_id")
+        tranche_name = request.GET.get("tranche_name")
+
+        if not planning_id:
+            return JsonResponse({"success": False, "error": "Planning ID is required"})
+
+        # Validate planning access
         try:
-            edited_data = json.loads(edited_data_str)
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON decode error: {e}")
-            return HttpResponse("Invalid data format.", status=400)
+            planning = PianificazioneImport.objects.get(
+                id=planning_id, imported_by=request.user
+            )
+        except PianificazioneImport.DoesNotExist:
+            return JsonResponse(
+                {"success": False, "error": "Planning not found or access denied"}
+            )
 
-        original_filename = request.session.get(
-            "original_filename", "converted_file.csv"
-        )
+        # Use XML export manager
+        from .xml_generator import XMLExportManager
 
-        if not edited_data:
-            logger.warning("Empty edited_data list")
-            return HttpResponse("No data available for download.", status=400)
+        export_manager = XMLExportManager(planning_id)
 
-        if not isinstance(edited_data, list) or not all(
-            isinstance(row, list) for row in edited_data
-        ):
-            logger.error("Invalid data structure")
-            return HttpResponse("Invalid data structure.", status=400)
+        if tranche_name:
+            result = export_manager.export_tranche(tranche_name, request.user.username)
+            filename = f"piano_{tranche_name}_optimized_by_{request.user.username}.xml"
+        else:
+            result = export_manager.export_full_planning(request.user.username)
+            filename = f"piano_complete_optimized_by_{request.user.username}.xml"
 
-        xml_content = generate_xml_content(
-            edited_data, original_filename, request.user.username, tranche_name
-        )
+        if not result["success"]:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": result.get("error", "XML generation failed"),
+                    "validation_errors": result.get("validation", {}).get("errors", []),
+                }
+            )
 
-        base_filename = (
-            original_filename.rsplit(".", 1)[0] if original_filename else "data"
-        )
-        safe_tranche_name = (
-            "".join(c for c in tranche_name if c.isalnum() or c in (" ", "_"))
-            .rstrip()
-            .replace(" ", "_")
-        )
-        xml_filename = (
-            f"{base_filename}_{safe_tranche_name}_edited_by_{request.user.username}.xml"
-        )
+        # Create HTTP response with XML content
+        response = HttpResponse(result["xml_content"], content_type="application/xml")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
-        response = HttpResponse(xml_content, content_type="application/xml")
-        response["Content-Disposition"] = f'attachment; filename="{xml_filename}"'
-        response["Content-Length"] = len(xml_content.encode("utf-8"))
-
-        logger.info(
-            f"XML file '{xml_filename}' generated successfully for user {request.user.username}"
-        )
+        logger.info(f"XML downloaded: {filename} by {request.user.username}")
         return response
 
     except Exception as e:
-        logger.error(f"Unexpected error generating XML: {e}", exc_info=True)
-        return HttpResponse("Error generating XML file.", status=500)
+        logger.error(f"Error generating XML: {str(e)}", exc_info=True)
+        return JsonResponse(
+            {"success": False, "error": f"Error generating XML: {str(e)}"}
+        )
+
+
+@login_required
+def planning_details(request, planning_id):
+    """
+    Show detailed planning results with all products
+    """
+    try:
+        # Get planning
+        planning = PianificazioneImport.objects.get(
+            id=planning_id, imported_by=request.user
+        )
+
+        # Get all products
+        products = Prodotto.objects.filter(pianificazione=planning).order_by(
+            "row_number"
+        )
+
+        # Prepare products data with countries
+        products_data = []
+        products_with_dates = 0
+
+        for product in products:
+            countries = list(
+                product.pianificazioni_paesi.values(
+                    "codice_paese", "data_disponibilita", "data_tipo"
+                )
+            )
+
+            # Count products with dates (excluding TBD and ASAP)
+            if any(
+                country.get("data_disponibilita")
+                and country.get("data_disponibilita") != "TBD"
+                and country.get("data_disponibilita") != "ASAP"
+                for country in countries
+            ):
+                products_with_dates += 1
+
+            products_data.append(
+                {
+                    "row_number": product.row_number,
+                    "codice_forn": product.codice_forn,
+                    "commerce": product.commerce,
+                    "made_in": product.made_in,
+                    "categorie": product.categorie,
+                    "impianti_russia_doganale": product.impianti_russia_doganale,
+                    "countries": countries,
+                }
+            )
+
+        # Statistics
+        stats = {
+            "total_products": products.count(),
+            "total_countries": PaesePianificazione.objects.filter(
+                prodotto__pianificazione=planning
+            )
+            .values("codice_paese")
+            .distinct()
+            .count(),
+            "products_with_dates": products_with_dates,
+        }
+
+        context = {"planning": planning, "products": products_data, "stats": stats}
+
+        return render(request, "planning_details.html", context)
+
+    except PianificazioneImport.DoesNotExist:
+        messages.error(request, "Planning not found or access denied")
+        return redirect("home")
+    except Exception as e:
+        logger.error(f"Error showing planning details: {str(e)}", exc_info=True)
+        messages.error(request, f"Error loading planning: {str(e)}")
+        return redirect("home")
+
+
+# ============================================================================
+# API ENDPOINTS (JSON responses)
+# ============================================================================
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_protect
+def api_upload_file(request):
+    """
+    API endpoint for file upload (returns JSON)
+    """
+    try:
+        if "file" not in request.FILES:
+            return JsonResponse({"success": False, "error": "No file provided"})
+
+        uploaded_file = request.FILES["file"]
+
+        # Validate file type
+        if not _is_valid_file_type(uploaded_file):
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "Invalid file type. Please upload Excel (.xlsx) files.",
+                }
+            )
+
+        # Process Excel file
+        result = _process_excel_file(uploaded_file, request.user)
+        return JsonResponse(result)
+
+    except Exception as e:
+        logger.error(f"Error in api_upload_file: {str(e)}", exc_info=True)
+        return JsonResponse({"success": False, "error": f"Server error: {str(e)}"})
+
+
+# ============================================================================
+# FILE PROCESSING FUNCTIONS
+# ============================================================================
+
+
+@transaction.atomic
+def _process_excel_file(uploaded_file, user):
+    print(f"🚀 DEBUG: INIZIO processamento file: {uploaded_file.name}")
+    logger.info(
+        f"🚀 INIZIO processamento file: {uploaded_file.name} per utente: {user.username}"
+    )
+
+    try:
+        import pandas as pd
+
+        # Read Excel file - RIPRISTINA LOGICA ORIGINALE
+        print("📖 DEBUG: Lettura file Excel...")
+        uploaded_file.seek(0)
+        xls = pd.ExcelFile(uploaded_file)
+
+        print("=== ANALISI FILE EXCEL ===")
+        print(f"Fogli disponibili: {xls.sheet_names}")
+
+        # Trova il foglio giusto - più flessibile
+        sheet_to_find = "PIANIFICAZIONE"
+        actual_sheet_name = None
+
+        # Prima prova nome esatto
+        for sheet_name in xls.sheet_names:
+            if sheet_name.upper() == sheet_to_find.upper():
+                actual_sheet_name = sheet_name
+                break
+
+        # Se non trova, prova nomi simili
+        if not actual_sheet_name:
+            for sheet_name in xls.sheet_names:
+                if "pianificaz" in sheet_name.lower():
+                    actual_sheet_name = sheet_name
+                    break
+
+        # Se ancora non trova, usa il primo foglio
+        if not actual_sheet_name:
+            actual_sheet_name = xls.sheet_names[0]
+
+        print(f"Foglio selezionato: {actual_sheet_name}")
+
+        if not actual_sheet_name:
+            return {
+                "success": False,
+                "error": f"Il file Excel non contiene un foglio chiamato '{sheet_to_find}' o simile.",
+            }
+
+        # Leggi il foglio SENZA HEADER (come originale)
+        df_raw = pd.read_excel(xls, sheet_name=actual_sheet_name, header=None)
+        print(f"Dimensioni foglio: {df_raw.shape}")
+
+        # Trova la riga header - LOGICA ORIGINALE
+        header_keyword = "chiave articolo colore"
+        header_row_index = -1
+
+        print("=== RICERCA HEADER ROW ===")
+        for i, row in df_raw.iterrows():
+            row_str = " ".join(str(x) for x in row.values if pd.notna(x)).lower()
+            print(f"Row {i}: {row_str[:80]}...")
+
+            if header_keyword in row_str:
+                header_row_index = i
+                print(f"TROVATA HEADER ROW {i}")
+                break
+
+        if header_row_index == -1:
+            return {
+                "success": False,
+                "error": f"Non riesco a trovare la riga header contenente '{header_keyword}' nel foglio '{actual_sheet_name}'.",
+            }
+
+        # PARSING ORIGINALE FUNZIONANTE
+        new_header = df_raw.iloc[header_row_index]
+        print(f"Header trovato: {new_header.tolist()[:10]}...")
+
+        df_data = df_raw[header_row_index + 1 :].copy()
+        df_data.columns = new_header
+        df_data.dropna(axis=1, how="all", inplace=True)
+
+        if df_data.empty:
+            return {"success": False, "error": "Nessun dato trovato dopo l'header."}
+
+        # Parse headers DOPO aver trovato quello giusto (solo per compatibilità)
+        print("🔍 DEBUG: Parsing headers...")
+        header_parser = ExcelHeaderParser()
+        parsed_headers = header_parser.parse_headers(new_header.tolist())
+        print(
+            f"✅ DEBUG: Headers parsati: {len(parsed_headers['country_mappings'])} country columns (per compatibilità)"
+        )
+
+        # Create planning import record
+        print("💾 DEBUG: Creazione planning import record...")
+        planning = PianificazioneImport.objects.create(
+            source_file_name=uploaded_file.name,
+            source_file_type="excel",
+            imported_by=user,
+            status="processing",
+            raw_headers=[str(h) for h in new_header.tolist()],
+        )
+        print(f"✅ DEBUG: Planning creato con ID: {planning.id}")
+
+        # Initialize processors
+        print("🔧 DEBUG: Inizializzazione processors...")
+        product_processor = ProductDataProcessor(planning)
+        simple_country_processor = SimpleCountryProcessor(planning)
+
+        # Process all data as a single table
+        print("📦 DEBUG: Processamento di tutti i prodotti...")
+
+        total_products = 0
+        all_countries = set()
+
+        for row_idx, (_, row) in enumerate(df_data.iterrows()):
+            print(f"📝 DEBUG: Processamento riga {row_idx + 1}/{len(df_data)}")
+
+            try:
+                # Process product
+                prodotto = product_processor.process_product_row(
+                    row.tolist(), new_header.tolist(), row_idx + 1
+                )
+
+                if prodotto:
+                    print(f"✅ DEBUG: Prodotto creato: {prodotto.codice_forn}")
+                    total_products += 1
+
+                    # Process countries with SIMPLE processor
+                    print(
+                        f"🌍 DEBUG: Processamento paesi SEMPLIFICATO per prodotto {prodotto.codice_forn}"
+                    )
+                    try:
+                        saved_countries = (
+                            simple_country_processor.process_product_countries(
+                                prodotto, row.tolist(), new_header.tolist(), df_data
+                            )
+                        )
+
+                        if saved_countries:
+                            print(
+                                f"✅ DEBUG: Creati {len(saved_countries)} paesi per {prodotto.codice_forn}"
+                            )
+                            all_countries.update(
+                                [c.codice_paese for c in saved_countries]
+                            )
+                        else:
+                            print(
+                                f"⚠️ DEBUG: Nessun paese creato per {prodotto.codice_forn}"
+                            )
+
+                    except Exception as country_error:
+                        print(
+                            f"❌ DEBUG: Errore processamento paesi per {prodotto.codice_forn}: {str(country_error)}"
+                        )
+                        # Non blocchiamo il prodotto per errori nei paesi
+
+                else:
+                    print(
+                        f"❌ DEBUG: Fallita creazione prodotto per riga {row_idx + 1}"
+                    )
+
+            except Exception as e:
+                print(
+                    f"💥 DEBUG: ERRORE durante processamento riga {row_idx + 1}: {str(e)}"
+                )
+                logger.error(
+                    f"Error processing row {row_idx + 1}: {str(e)}", exc_info=True
+                )
+                # Continua con la prossima riga senza fermare tutto il processamento
+                continue
+
+        print(f"🎉 DEBUG: COMPLETATO! Processati {total_products} prodotti")
+
+        # Update planning
+        planning.total_products = total_products
+        planning.total_countries = len(all_countries)
+        planning.status = "processed"
+        planning.save()
+
+        return {
+            "success": True,
+            "planning_id": planning.id,
+            "stats": {"products": total_products, "countries": len(all_countries)},
+        }
+
+    except Exception as e:
+        print(f"💥 DEBUG: ERRORE CRITICO: {str(e)}")
+        print(f"💥 DEBUG: Tipo errore: {type(e).__name__}")
+        logger.error(f"Error processing Excel file: {str(e)}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+
+def _is_valid_file_type(uploaded_file):
+    """Validate if uploaded file is a valid Excel file"""
+    if not uploaded_file:
+        return False
+
+    # Check file extension
+    allowed_extensions = [".xlsx", ".xls"]
+    file_extension = os.path.splitext(uploaded_file.name)[1].lower()
+
+    return file_extension in allowed_extensions
+
+
+def _get_recent_imports(user, limit=10):
+    """Get recent imports for a user"""
+    return PianificazioneImport.objects.filter(imported_by=user).order_by(
+        "-imported_at"
+    )[:limit]  # Fixed: use imported_at instead of created_at
+
+
+def _get_user_plannings(user):
+    """Get user plannings for the UI"""
+    return PianificazioneImport.objects.filter(
+        imported_by=user, status="processed"
+    ).order_by("-imported_at")[:20]
+
+
+# ============================================================================
+# LEGACY SUPPORT FUNCTIONS
+# ============================================================================
+
+
+def generate_optimized_xml_content(planning_id, tranche_name, username):
+    """Legacy function for XML generation"""
+    try:
+        export_manager = XMLExportManager(planning_id)
+        if tranche_name:
+            result = export_manager.export_tranche(tranche_name, username)
+        else:
+            result = export_manager.export_full_planning(username)
+
+        if result["success"]:
+            return result["xml_content"]
+        else:
+            raise Exception(result.get("error", "XML generation failed"))
+
+    except Exception as e:
+        logger.error(f"Legacy XML generation error: {str(e)}")
+        raise
+
+
+def process_and_save_excel_file(uploaded_file, user):
+    """Legacy function for Excel processing"""
+    result = _process_excel_file(uploaded_file, user)
+    if result["success"]:
+        return result["planning_id"]
+    else:
+        return None
