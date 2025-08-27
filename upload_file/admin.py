@@ -5,9 +5,9 @@ from .models import PianificazioneImport, Prodotto, PaesePianificazione, Country
 
 @admin.register(PianificazioneImport)
 class PianificazioneImportAdmin(admin.ModelAdmin):
-    list_display = ('source_file_name', 'tranche_name', 'status', 'total_products', 'total_countries', 'imported_at', 'imported_by')
+    list_display = ('source_file_name', 'status', 'total_products', 'total_countries', 'imported_at', 'imported_by')
     list_filter = ('status', 'source_file_type', 'imported_at')
-    search_fields = ('source_file_name', 'tranche_name')
+    search_fields = ('source_file_name',)
     readonly_fields = ('imported_at', 'total_products', 'total_countries')
 
 

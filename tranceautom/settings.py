@@ -28,6 +28,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 env = environ.Env(DEBUG=(bool, False))
 
 SECRET_KEY = env("SECRET_KEY")
+DEBUG = True
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]  # ['app-xyz.a.run.app', 'gcp-url']
 
@@ -154,7 +155,20 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+
+# Directory where static files are collected for production
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Additional directories where Django looks for static files
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # Aggiungi questa linea!
+]
+
+# Static files finders (aggiungi se non esiste)
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -189,4 +203,47 @@ MESSAGE_TAGS = {
     messages.SUCCESS: "success",
     messages.WARNING: "warning",
     messages.ERROR: "danger",
+}
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[{levelname}] {asctime} {name}: {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'upload_file': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }

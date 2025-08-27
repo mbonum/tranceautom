@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from datetime import datetime
 import json
 
 
@@ -24,7 +25,6 @@ class PianificazioneImport(models.Model):
     # Import metadata
     source_file_name = models.CharField(max_length=255, verbose_name="Source file name")
     source_file_type = models.CharField(max_length=10, choices=SOURCE_FILE_CHOICES, default='excel')
-    tranche_name = models.CharField(max_length=100, verbose_name="Tranche name")
     imported_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Imported by")
     imported_at = models.DateTimeField(default=timezone.now, verbose_name="Import date")
     
@@ -44,7 +44,29 @@ class PianificazioneImport(models.Model):
         ordering = ['-imported_at']
     
     def __str__(self):
-        return f"{self.source_file_name} - {self.tranche_name} ({self.status})"
+        return f"{self.source_file_name} ({self.status})"
+    
+    def get_all_products(self):
+        """Get all products for this planning"""
+        return self.prodotti.all().order_by('row_number')
+    
+    def get_products_data(self):
+        """Get table data for all products"""
+        products = self.get_all_products()
+        
+        # Build headers (reconstruct from raw_headers)
+        headers = ['#'] + self.raw_headers
+        
+        # Build data rows
+        data = []
+        for idx, product in enumerate(products, 1):
+            row = [str(idx)] + product.raw_data
+            data.append([str(cell) for cell in row])
+        
+        return {
+            'headers': headers,
+            'data': data
+        }
 
 
 class Prodotto(models.Model):
@@ -56,7 +78,7 @@ class Prodotto(models.Model):
     # Product identifiers
     codice_forn = models.CharField(max_length=50, verbose_name="Supplier Code")
     made_in = models.CharField(max_length=100, verbose_name="Made In")
-    impianti_russia_doganale = models.CharField(max_length=100, verbose_name="Russia Customs Plants")
+    impianti_russia_doganale = models.CharField(max_length=100, blank=True, verbose_name="Russia Customs Plants")
     categorie = models.CharField(max_length=100, blank=True, verbose_name="Categories")
     commerce = models.CharField(max_length=100, verbose_name="Commerce")
     
@@ -121,12 +143,51 @@ class PaesePianificazione(models.Model):
         return f"{self.prodotto.codice_forn} - {self.codice_paese} ({self.data_disponibilita})"
     
     def clean(self):
-        """Custom country planning validation"""
+        """Custom country planning validation with enhanced country validation"""
         if len(self.codice_paese) < 2 or len(self.codice_paese) > 3:
             raise ValidationError("Country code must be 2-3 characters")
         
         if not self.codice_paese.isalpha():
             raise ValidationError("Country code must contain only letters")
+            
+        # Validate against the standardized country list
+        from .country_utils import CountryManager
+        if not CountryManager.is_valid_country(self.codice_paese):
+            raise ValidationError(f"Invalid country code: {self.codice_paese}")
+    
+    def get_formatted_date_for_xml(self):
+        """
+        Get a formatted date suitable for XML export
+        """
+        from .country_utils import DateNormalizer
+        if self.data_tipo == 'immediate':
+            return 'ASAP'
+        elif self.data_tipo == 'tbd':
+            return 'TBD'
+        else:
+            return self.data_disponibilita.strftime('%Y-%m-%d')
+    
+    @classmethod
+    def create_from_tranche(cls, prodotto, country_code, tranche, **kwargs):
+        """
+        Create a country planning record from a tranche number/name
+        """
+        from .country_utils import TrancheDateConverter, DateNormalizer
+        
+        # Convert tranche to date
+        iso_date_str = TrancheDateConverter.convert_tranche_to_iso_date(str(tranche))
+        availability_date = datetime.strptime(iso_date_str, '%Y-%m-%d').date()
+        
+        # Determine date type
+        date_type = DateNormalizer.determine_date_type(str(tranche))
+        
+        return cls.objects.create(
+            prodotto=prodotto,
+            codice_paese=country_code,
+            data_disponibilita=availability_date,
+            data_tipo=date_type,
+            **kwargs
+        )
 
 
 class CountryGroup(models.Model):

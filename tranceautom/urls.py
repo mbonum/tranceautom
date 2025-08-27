@@ -8,9 +8,8 @@ from upload_file.views import (
     user_logout,
     user_register,
     home,
-    # download_csv,
     download_xml,
-    # process_excel_to_csv,
+    planning_details,  # Aggiungiamo la vista mancante
 )
 from django.views.static import serve
 
@@ -26,8 +25,7 @@ urlpatterns = [
     path("logout/", user_logout, name="logout"),
     path("register/", user_register, name="register"),
     path("", home, name="home"),
-    # path("process-excel/", process_excel_to_csv, name="process_excel"),
-    # path("download-csv/", download_csv, name="download_csv"),
+    path("planning/<int:planning_id>/", planning_details, name="planning_details"),
     path("download-xml/", download_xml, name="download_xml"),
     path(
         "favicon.ico",

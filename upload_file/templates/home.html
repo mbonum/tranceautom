@@ -86,12 +86,16 @@
     margin-bottom: 1rem;  
   }
 </style>
+
 <div class="container mt-5">
   <div class="row justify-content-center">
+    <!-- Upload Form -->
     <div class="col-md-6 mb-3">
       <div class="card">
         <div class="card-header">
-          <h4 class="card-title text-center mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Tranche Automation</h4>
+          <h4 class="card-title text-center mb-0">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Tranche Automation
+          </h4>
         </div>
         <div class="card-body">
           <form id="upload-form" method="post" enctype="multipart/form-data">
@@ -101,10 +105,9 @@
             {% endif %}
 
             <div class="mb-3">
-              <label for="file" class="form-label">Select File</label>
-              <input type="file" class="form-control" name="file" id="file" accept=".xlsx,.xls,.csv" />
+              {{ upload_form.excel_file.label_tag }}
+              {{ upload_form.excel_file }}
               <div class="form-text">Upload an Excel file (.xlsx, .xls)</div>
-              {# <!-- to convert to CSV, or a CSV file to validate and preview --> #}
             </div>
 
             <button id="upload-btn" type="submit" class="btn btn-primary w-100">
@@ -114,6 +117,8 @@
         </div>
       </div>
     </div>
+
+    <!-- Preview Section -->
     {% if preview %}
     <div class="col-md-12 mb-3">
       <div class="card">
@@ -126,25 +131,32 @@
               <p><i class="bi bi-check-square"></i> <strong>Check</strong> that everything is correct in the XML.</p>
               <p><i class="bi bi-copy"></i> <strong>Copy</strong> the XML file and paste it into the PIM folder.</p>
             </div>
+            
             {% if filename %}
             <p class="mb-2"><strong>File:</strong> {{ filename }}</p>
             {% endif %}
+            
             {% if tranches %}
             <div class="mb-3">
               <label for="tranche-selector" class="form-label">Select Tranche</label>
               <select id="tranche-selector" class="form-select">
                 {% for tranche in tranches %}
-                <option value="{{ tranche }}" {% if tranche == selected_tranche %}selected{% endif %}>{{ tranche }}</option>
+                <option value="{{ tranche }}" {% if tranche == selected_tranche %}selected{% endif %}>
+                  {{ tranche }}
+                </option>
                 {% endfor %}
               </select>
             </div>
             {% endif %}
+            
             <div class="d-flex flex-row-reverse align-items-center">
               <button id="download-xml-btn" class="btn btn-success" {% if not selected_tranche %}disabled{% endif %}>
                 <i class="bi bi-download"></i> Download XML
               </button>
             </div>
           </div>
+
+          <!-- Data Table -->
           <div class="preview-container">
             {% if table_headers and table_data %}
             <table id="editable-table" class="table table-striped table-bordered">
@@ -159,11 +171,11 @@
                 {% for row in table_data %}
                 <tr>
                   {% for cell in row %}
-                    {% if forloop.first %}
+                  {% if forloop.first %}
                   <td class="row-number-cell" contenteditable="false">{{ cell|default:"" }}</td>
-                    {% else %}
+                  {% else %}
                   <td class="editable-cell" contenteditable="true">{{ cell|default:"" }}</td>
-                    {% endif %}
+                  {% endif %}
                   {% endfor %}
                 </tr>
                 {% endfor %}
@@ -181,186 +193,127 @@
     {% endif %}
   </div>
 </div>
-</div>
-{% comment %}<!-- <div class="container pt-3 pb-4">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="card shadow-sm p-4">
-        <h2 class="mb-4 text-center">Upload file</h2>
-        <form method="post" enctype="multipart/form-data">
-          {% csrf_token %}
-          {% if error %}
-          <div class="alert alert-danger" role="alert">{{ error }}</div>
-          {% endif %}
-          <div class="mb-3">
-            <input type="file" class="form-control" name="file" accept=".xlsx,.xls" />
-            <!- - .xlsx,.xls csv - ->
-          </div>
-          <button type="submit" class="btn btn-primary w-100">Upload</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
-{% if preview %}
-<div class="card shadow-sm px-4 py-3 mx-4 mb-4">
-  <h4 class="mb-1">Preview</h4>
-  <div class="table-container">
-    <div class="top-scrollbar-wrapper" id="topScrollbar">
-      <div class="top-scrollbar-content" id="topScrollbarContent"></div>
-    </div>
-    <div style="overflow-x: auto; width: 100%;" id="tableWrapper">
-      {{ preview|safe }}
-    </div>
-  </div>   const topScrollbar = document.getElementById('topScrollbar');
-  const tableWrapper = document.getElementById('tableWrapper');
-  const topScrollbarContent = document.getElementById('topScrollbarContent');
 
-  function updateScrollbarWidth() {
-    const table = tableWrapper.querySelector('table');
-    if (table) {
-      topScrollbarContent.style.width = table.scrollWidth + 'px';
-    }
+<!-- Hidden iframe for downloads -->
+<iframe id="download-target" name="download-target" style="display:none;"></iframe>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const downloadBtn = document.getElementById('download-xml-btn');
+  const trancheSelector = document.getElementById('tranche-selector');
+
+  // Handle tranche selection
+  if (trancheSelector) {
+    trancheSelector.addEventListener('change', function () {
+      const selectedTranche = this.value;
+      window.location.href = window.location.pathname + '?tranche=' + encodeURIComponent(selectedTranche);
+    });
   }
 
-  topScrollbar.addEventListener('scroll', function () {
-    tableWrapper.scrollLeft = topScrollbar.scrollLeft;
-  });
+  // Handle XML download
+  if (downloadBtn) {
+    downloadBtn.addEventListener('click', function () {
+      const table = document.getElementById('editable-table');
+      if (!table) {
+        alert('Table not found!');
+        return;
+      }
 
-  tableWrapper.addEventListener('scroll', function () {
-    topScrollbar.scrollLeft = tableWrapper.scrollLeft;
-  });
+      const rows = table.querySelectorAll('tbody tr');
+      const editedData = [];
 
-  // Initialize after content loads
-  setTimeout(updateScrollbarWidth, 100);
-  window.addEventListener('resize', updateScrollbarWidth);
-  // const uploadForm = document.getElementById('upload-form');
-  // const uploadBtn = document.getElementById('upload-btn');
-  // if (uploadForm && uploadBtn) {
-  //   uploadForm.addEventListener('submit', function () {
-  //     // Replace the button content with a spinner
-  //     uploadBtn.innerHTML = `
-  //       <div class="spinner-border" role="status">
-  //         <span class="sr-only">Loading...</span>
-  //       </div>
-  //     `;
-  //     // Optionally disable the button to prevent double submissions
-  //     uploadBtn.disabled = true;
-  //   });
-  // }-->{% endcomment %}
-<iframe id="download-target" name="download-target" style="display:none;"></iframe>
-<script>
-  // Handle editable table and XML download
-  document.addEventListener('DOMContentLoaded', function () {
-
-    const downloadBtn = document.getElementById('download-xml-btn');
-    const trancheSelector = document.getElementById('tranche-selector');
-
-    if (trancheSelector) {
-      trancheSelector.addEventListener('change', function () {
-        const selectedTranche = this.value;
-        // reload page with new tranche selected
-        window.location.href = window.location.pathname + '?tranche=' + encodeURIComponent(selectedTranche);
+      // Add headers
+      const headerCells = table.querySelectorAll('thead th');
+      const headers = [];
+      headerCells.forEach(cell => {
+        headers.push(cell.textContent.trim());
       });
-    }
+      editedData.push(headers);
 
-    if (downloadBtn) {
-      downloadBtn.addEventListener('click', function () {
-        const table = document.getElementById('editable-table');
-        if (!table) {
-          alert('Table not found!');
-          return;
-        }
-
-        const rows = table.querySelectorAll('tbody tr');
-        const editedData = [];
-
-        rows.forEach(row => {
-          const cells = row.querySelectorAll('td');
-          const rowData = [];
-          cells.forEach(cell => {
-            rowData.push(cell.textContent.trim());
-          });
-          editedData.push(rowData);
+      // Add data rows
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const rowData = [];
+        cells.forEach(cell => {
+          rowData.push(cell.textContent.trim());
         });
+        editedData.push(rowData);
+      });
 
-        if (editedData.length === 0) {
-          alert('No data to download!');
-          return;
-        }
+      if (editedData.length === 0) {
+        alert('No data to download!');
+        return;
+      }
 
-        // Create a form to submit edited data
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/download-xml/';
-        form.target = 'download-target'; // So it doesn't navigate away
-        form.style.display = 'none';
+      // Get tranche name
+      const urlParams = new URLSearchParams(window.location.search);
+      const trancheName = urlParams.get('tranche');
+      if (!trancheName) {
+        alert('Please select a tranche first.');
+        return;
+      }
 
-        // CSRF token
-        const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
-        if (!csrfTokenElement) {
-          alert('CSRF token not found!');
-          return;
-        }
+      // Get CSRF token
+      const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+      if (!csrfTokenElement) {
+        alert('CSRF token not found!');
+        return;
+      }
 
-        // Add tranche name to the form
-        const urlParams = new URLSearchParams(window.location.search);
-        const trancheName = urlParams.get('tranche');
+      // Create form for download
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/download-xml/';
+      form.target = 'download-target';
+      form.style.display = 'none';
 
-        if (!trancheName) {
-          alert('Please select a tranche first.');
-          return;
-        }
-        const trancheInput = document.createElement('input');
-        trancheInput.type = 'hidden';
-        trancheInput.name = 'tranche_name';
-        trancheInput.value = trancheName;
-        form.appendChild(trancheInput);
-        const csrfInput = document.createElement('input');
-        csrfInput.type = 'hidden';
-        csrfInput.name = 'csrfmiddlewaretoken';
-        csrfInput.value = csrfTokenElement.value;
-        form.appendChild(csrfInput);
+      // Add form fields
+      const fields = {
+        'csrfmiddlewaretoken': csrfTokenElement.value,
+        'tranche_name': trancheName,
+        'edited_data': JSON.stringify(editedData),
+        'planning_id': '{{ planning_id }}'  // Add planning ID from context
+      };
 
-        // Edited data
-        const dataInput = document.createElement('input');
-        dataInput.type = 'hidden';
-        dataInput.name = 'edited_data';
-        dataInput.value = JSON.stringify(editedData);
-        form.appendChild(dataInput);
+      Object.keys(fields).forEach(name => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = fields[name];
+        form.appendChild(input);
+      });
 
-        document.body.appendChild(form);
-        form.submit();
+      document.body.appendChild(form);
+      form.submit();
 
-        // Clean up
-        setTimeout(() => {
+      // Clean up
+      setTimeout(() => {
+        if (document.body.contains(form)) {
           document.body.removeChild(form);
-        }, 1000);
-      });
-    }
-
-    // Add visual feedback for cell editing
-    const editableCells = document.querySelectorAll('.editable-cell');
-    // console.log('Found editable cells:', editableCells.length); // Debug log
-
-    editableCells.forEach(cell => {
-      cell.addEventListener('focus', function () {
-        this.style.backgroundColor = '#f8f9ff';
-      });
-
-      cell.addEventListener('blur', function () {
-        this.style.backgroundColor = '';
-      });
-
-      // Save changes on Enter key
-      cell.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          this.blur();
         }
-      });
+      }, 1000);
+    });
+  }
+
+  // Add visual feedback for cell editing
+  const editableCells = document.querySelectorAll('.editable-cell');
+  editableCells.forEach(cell => {
+    cell.addEventListener('focus', function () {
+      this.style.backgroundColor = '#f8f9ff';
+    });
+
+    cell.addEventListener('blur', function () {
+      this.style.backgroundColor = '';
+    });
+
+    // Save changes on Enter key
+    cell.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.blur();
+      }
     });
   });
+});
 </script>
-{% endif %}
 {% endblock %}
