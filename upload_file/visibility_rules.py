@@ -512,7 +512,7 @@ def test_visibility_rules():
     
     # Statistics
     stats = VisibilityRules.get_rule_stats()
-    print(f"\n=== STATS ===")
+    print("\n=== STATS ===")
     for key, value in stats.items():
         print(f"{key}: {value}")
 
