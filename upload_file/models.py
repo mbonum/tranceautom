@@ -8,235 +8,236 @@ import json
 
 class PianificazioneImport(models.Model):
     """
-    Represents a product planning import from Excel file
+    Rappresenta un import di pianificazione da file Excel
     """
-    SOURCE_FILE_CHOICES = [
-        ('excel', 'Excel (.xlsx/.xls)'),
-        ('csv', 'CSV'),
-    ]
-    
     STATUS_CHOICES = [
-        ('pending', 'Processing'),
-        ('processed', 'Processed'),
-        ('error', 'Error'),
-        ('exported', 'Exported'),
+        ('pending', 'In elaborazione'),
+        ('processed', 'Elaborato'),
+        ('error', 'Errore'),
     ]
     
-    # Import metadata
-    source_file_name = models.CharField(max_length=255, verbose_name="Source file name")
-    source_file_type = models.CharField(max_length=10, choices=SOURCE_FILE_CHOICES, default='excel')
-    imported_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Imported by")
-    imported_at = models.DateTimeField(default=timezone.now, verbose_name="Import date")
+    # Metadati import
+    source_file_name = models.CharField(max_length=255, verbose_name="Nome file sorgente")
+    imported_by = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Importato da")
+    imported_at = models.DateTimeField(default=timezone.now, verbose_name="Data import")
     
-    # Status and statistics
+    # Status e statistiche
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    total_products = models.PositiveIntegerField(default=0, verbose_name="Total products")
-    total_countries = models.PositiveIntegerField(default=0, verbose_name="Total countries")
-    error_message = models.TextField(blank=True, null=True, verbose_name="Error message")
+    total_products = models.PositiveIntegerField(default=0, verbose_name="Totale prodotti")
+    total_countries = models.PositiveIntegerField(default=0, verbose_name="Totale paesi")
+    error_message = models.TextField(blank=True, null=True, verbose_name="Messaggio errore")
     
-    # Additional JSON metadata
-    raw_headers = models.JSONField(default=list, verbose_name="Original headers", help_text="Original Excel file headers")
-    country_mappings = models.JSONField(default=dict, verbose_name="Country mappings", help_text="Column -> countries mapping")
+    # File generati
+    csv_file_path = models.CharField(max_length=500, blank=True, verbose_name="Percorso file CSV")
+    processed_file_path = models.CharField(max_length=500, blank=True, verbose_name="Percorso file processato")
     
     class Meta:
-        verbose_name = "Planning Import"
-        verbose_name_plural = "Planning Imports"
+        verbose_name = "Import Pianificazione"
+        verbose_name_plural = "Import Pianificazioni"
         ordering = ['-imported_at']
     
     def __str__(self):
         return f"{self.source_file_name} ({self.status})"
     
     def get_all_products(self):
-        """Get all products for this planning"""
+        """Ottiene tutti i prodotti per questa pianificazione"""
         return self.prodotti.all().order_by('row_number')
-    
-    def get_products_data(self):
-        """Get table data for all products"""
-        products = self.get_all_products()
-        
-        # Build headers (reconstruct from raw_headers)
-        headers = ['#'] + self.raw_headers
-        
-        # Build data rows
-        data = []
-        for idx, product in enumerate(products, 1):
-            row = [str(idx)] + product.raw_data
-            data.append([str(cell) for cell in row])
-        
-        return {
-            'headers': headers,
-            'data': data
-        }
 
 
 class Prodotto(models.Model):
     """
-    Represents a single product in the planning
+    Rappresenta un singolo prodotto nella pianificazione
     """
     pianificazione = models.ForeignKey(PianificazioneImport, on_delete=models.CASCADE, related_name='prodotti')
     
-    # Product identifiers
-    codice_forn = models.CharField(max_length=50, verbose_name="Supplier Code")
-    made_in = models.CharField(max_length=100, verbose_name="Made In")
-    impianti_russia_doganale = models.CharField(max_length=100, blank=True, verbose_name="Russia Customs Plants")
-    categorie = models.CharField(max_length=100, blank=True, verbose_name="Categories")
-    commerce = models.CharField(max_length=100, verbose_name="Commerce")
+    # Identificatori prodotto
+    chiave_articolo = models.CharField(max_length=100, verbose_name="Chiave Articolo", default='')
+    concatena_magazzino = models.CharField(max_length=100, verbose_name="Concatena Magazzino", default='')
+    serie = models.CharField(max_length=100, verbose_name="Serie", default='')
+    merceologia = models.CharField(max_length=100, verbose_name="Merceologia", default='')
+    n_tranche = models.CharField(max_length=50, verbose_name="N. Tranche", default='')
+    stagione = models.CharField(max_length=50, verbose_name="Stagione", default='')
+    sku = models.CharField(max_length=100, verbose_name="SKU", default='')
+    articolo = models.CharField(max_length=100, verbose_name="Articolo", default='')
+    colore = models.CharField(max_length=50, verbose_name="Colore", default='')
+    taglia = models.CharField(max_length=20, verbose_name="Taglia", default='')
+    descrizione = models.TextField(verbose_name="Descrizione", default='')
     
-    # Additional product fields
-    sku = models.CharField(max_length=50, blank=True, verbose_name="SKU")
-    season = models.CharField(max_length=20, blank=True, verbose_name="Season")
-    article = models.CharField(max_length=100, blank=True, verbose_name="Article")
-    color = models.CharField(max_length=50, blank=True, verbose_name="Color")
-    size = models.CharField(max_length=20, blank=True, verbose_name="Size")
-    description = models.TextField(blank=True, verbose_name="Description")
+    # Date principali
+    data_inizio_consegna = models.CharField(max_length=50, blank=True, verbose_name="Data Inizio Consegna")
+    data_spedizione_reale = models.CharField(max_length=50, blank=True, verbose_name="Data Spedizione Reale")
+    data_consegna_fornitore = models.CharField(max_length=50, blank=True, verbose_name="Data Consegna Fornitore")
     
-    # Metadata
-    row_number = models.PositiveIntegerField(verbose_name="Row number in file")
-    raw_data = models.JSONField(default=list, verbose_name="Original row data", help_text="All original row data")
+    # Informazioni fornitore
+    impianti_per = models.CharField(max_length=200, blank=True, verbose_name="Impianti Per")
+    note_ufficio = models.CharField(max_length=500, blank=True, verbose_name="Note Ufficio")
+    fornitore = models.CharField(max_length=200, blank=True, verbose_name="Fornitore")
+    codice_forn = models.CharField(max_length=50, blank=True, verbose_name="Codice Forn")
+    made_in = models.CharField(max_length=100, blank=True, verbose_name="Made In")
+    
+    # Stock e disponibilità
+    impianti_russia = models.CharField(max_length=200, blank=True, verbose_name="Impianti Russia")
+    ocli_mondo_russia = models.CharField(max_length=200, blank=True, verbose_name="OCLI Mondo+Russia")
+    anticipi_milano = models.CharField(max_length=200, blank=True, verbose_name="Anticipi Milano")
+    impianto_russia_startup = models.CharField(max_length=200, blank=True, verbose_name="Impianto Russia Startup")
+    stock_l = models.CharField(max_length=50, blank=True, verbose_name="Stock L")
+    stock_cq = models.CharField(max_length=50, blank=True, verbose_name="Stock CQ")
+    stock_b = models.CharField(max_length=50, blank=True, verbose_name="Stock B")
+    ocli = models.CharField(max_length=50, blank=True, verbose_name="OCLI")
+    esistenza = models.CharField(max_length=50, blank=True, verbose_name="Esistenza")
+    stock_l_cq_ocli = models.CharField(max_length=50, blank=True, verbose_name="Stock L+CQ-OCLI")
+    x_per_pv_foto = models.CharField(max_length=50, blank=True, verbose_name="X per PV Foto")
+    stock_cq_2 = models.CharField(max_length=50, blank=True, verbose_name="Stock CQ 2")
+    
+    # Categorie e visibilità
+    categorie = models.CharField(max_length=200, blank=True, verbose_name="Categorie")
+    note_categorie = models.CharField(max_length=500, blank=True, verbose_name="Note Categorie")
+    ecommerce_visibility = models.CharField(max_length=200, blank=True, verbose_name="E-commerce Visibility")
+    
+    # Informazioni paesi (JSON)
+    paesi_disponibili = models.JSONField(default=list, verbose_name="Paesi Disponibili")
+    paesi_aap = models.JSONField(default=list, verbose_name="Paesi AAP")
+    paesi_con_date = models.JSONField(default=list, verbose_name="Paesi con Date")
+    date_paesi = models.JSONField(default=dict, verbose_name="Date Paesi")
+    
+    # Metadati
+    row_number = models.PositiveIntegerField(verbose_name="Numero riga nel file")
     
     class Meta:
-        verbose_name = "Product"
-        verbose_name_plural = "Products"
+        verbose_name = "Prodotto"
+        verbose_name_plural = "Prodotti"
         ordering = ['row_number']
     
     def __str__(self):
-        return f"{self.codice_forn} - {self.commerce}"
+        return f"{self.chiave_articolo} - {self.descrizione[:50]}"
     
-    def clean(self):
-        """Custom product validation"""
-        if not self.codice_forn:
-            raise ValidationError("Supplier Code is required")
-        
-        if not self.commerce:
-            raise ValidationError("Commerce is required")
-
-
-class PaesePianificazione(models.Model):
-    """
-    Represents the planning of a product for a specific country
-    """
-    prodotto = models.ForeignKey(Prodotto, on_delete=models.CASCADE, related_name='pianificazioni_paesi')
+    def get_countries_with_dates(self):
+        """Ottiene i paesi con le loro date specifiche"""
+        return self.date_paesi
     
-    # Country information
-    codice_paese = models.CharField(max_length=3, verbose_name="Country Code", help_text="ISO country code (e.g.: IT, FR, DE)")
-    nome_paese = models.CharField(max_length=100, blank=True, verbose_name="Country Name")
+    def get_countries_aap(self):
+        """Ottiene i paesi con disponibilità AAP"""
+        return self.paesi_aap
     
-    # Planning dates
-    data_disponibilita = models.DateField(verbose_name="Availability Date")
-    data_tipo = models.CharField(max_length=20, choices=[
-        ('immediate', 'Immediate (ASAP)'),
-        ('scheduled', 'Scheduled'),
-        ('tbd', 'To be determined'),
-    ], default='scheduled', verbose_name="Date Type")
+    def get_all_available_countries(self):
+        """Ottiene tutti i paesi disponibili"""
+        return self.paesi_disponibili
     
-    # Source references
-    source_column = models.PositiveIntegerField(verbose_name="Source column", help_text="Column number in Excel file")
-    source_group = models.CharField(max_length=500, verbose_name="Source group", help_text="Original country group header")
+    def get_country_date(self, country_code):
+        """Ottiene la data per un paese specifico"""
+        return self.date_paesi.get(country_code.upper())
     
-    class Meta:
-        verbose_name = "Country Planning"
-        verbose_name_plural = "Country Plannings"
-        unique_together = ('prodotto', 'codice_paese', 'data_disponibilita')
-        ordering = ['codice_paese', 'data_disponibilita']
+    def is_country_aap(self, country_code):
+        """Verifica se un paese ha disponibilità AAP"""
+        return country_code.upper() in [c.upper() for c in self.paesi_aap]
     
-    def __str__(self):
-        return f"{self.prodotto.codice_forn} - {self.codice_paese} ({self.data_disponibilita})"
-    
-    def clean(self):
-        """Custom country planning validation with enhanced country validation"""
-        if len(self.codice_paese) < 2 or len(self.codice_paese) > 3:
-            raise ValidationError("Country code must be 2-3 characters")
-        
-        if not self.codice_paese.isalpha():
-            raise ValidationError("Country code must contain only letters")
-            
-        # Validate against the standardized country list
-        from .country_utils import CountryManager
-        if not CountryManager.is_valid_country(self.codice_paese):
-            raise ValidationError(f"Invalid country code: {self.codice_paese}")
-    
-    def get_formatted_date_for_xml(self):
-        """
-        Get a formatted date suitable for XML export
-        """
-        from .country_utils import DateNormalizer
-        if self.data_tipo == 'immediate':
-            return 'ASAP'
-        elif self.data_tipo == 'tbd':
-            return 'TBD'
-        else:
-            return self.data_disponibilita.strftime('%Y-%m-%d')
-    
-    @classmethod
-    def create_from_tranche(cls, prodotto, country_code, tranche, **kwargs):
-        """
-        Create a country planning record from a tranche number/name
-        """
-        from .country_utils import TrancheDateConverter, DateNormalizer
-        
-        # Convert tranche to date
-        iso_date_str = TrancheDateConverter.convert_tranche_to_iso_date(str(tranche))
-        availability_date = datetime.strptime(iso_date_str, '%Y-%m-%d').date()
-        
-        # Determine date type
-        date_type = DateNormalizer.determine_date_type(str(tranche))
-        
-        return cls.objects.create(
-            prodotto=prodotto,
-            codice_paese=country_code,
-            data_disponibilita=availability_date,
-            data_tipo=date_type,
-            **kwargs
-        )
+    def is_country_available(self, country_code):
+        """Verifica se un paese è disponibile"""
+        return country_code.upper() in [c.upper() for c in self.paesi_disponibili]
 
 
 class CountryGroup(models.Model):
     """
-    Represents a country group as it appears in the Excel file header
+    Rappresenta un gruppo di paesi come appare nell'header del file Excel
     """
     pianificazione = models.ForeignKey(PianificazioneImport, on_delete=models.CASCADE, related_name='country_groups')
     
-    # Group information
-    header_text = models.CharField(max_length=500, verbose_name="Header Text", help_text="Original header text (e.g.: AL-BG-BY-CY-EE-GE...)")
-    column_index = models.PositiveIntegerField(verbose_name="Column Index")
+    # Informazioni gruppo
+    header_text = models.CharField(max_length=500, verbose_name="Testo Header", help_text="Testo originale dell'header (es: AL-BG-BY-CY-EE-GE...)")
+    column_index = models.PositiveIntegerField(verbose_name="Indice Colonna")
     
-    # Countries in the group
-    countries = models.JSONField(default=list, verbose_name="Country List", help_text="List of country codes in the group")
+    # Paesi nel gruppo
+    countries = models.JSONField(default=list, verbose_name="Lista Paesi", help_text="Lista dei codici paese nel gruppo")
     
     class Meta:
-        verbose_name = "Country Group"
-        verbose_name_plural = "Country Groups"
-        unique_together = ('pianificazione', 'column_index')
-        ordering = ['column_index']
+        verbose_name = "Gruppo Paesi"
+        verbose_name_plural = "Gruppi Paesi"
+
+
+class PaesePianificazione(models.Model):
+    """
+    Rappresenta la pianificazione per un singolo paese di un prodotto
+    """
+    TIPO_DATA_CHOICES = [
+        ('as_available', 'As Available (AAP)'),
+        ('data_specifica', 'Data Specifica'),
+        ('to_be_determined', 'To Be Determined (TBD)'),
+        ('non_specificato', 'Non Specificato'),
+        ('altro', 'Altro'),
+    ]
+    
+    # Relazioni
+    prodotto = models.ForeignKey(
+        Prodotto, 
+        on_delete=models.CASCADE, 
+        related_name='paesi_pianificazione',
+        verbose_name="Prodotto"
+    )
+    
+    # Informazioni paese
+    codice_paese = models.CharField(max_length=3, verbose_name="Codice Paese")
+    data_disponibilita = models.DateField(null=True, blank=True, verbose_name="Data Disponibilità")
+    data_tipo = models.CharField(
+        max_length=20, 
+        choices=TIPO_DATA_CHOICES, 
+        default='non_specificato',
+        verbose_name="Tipo Data"
+    )
+    
+    # Metadati sorgente
+    source_column = models.CharField(max_length=200, blank=True, verbose_name="Colonna Sorgente")
+    source_group = models.CharField(max_length=200, blank=True, verbose_name="Gruppo Sorgente")
+    availability_value = models.CharField(max_length=100, blank=True, verbose_name="Valore Disponibilità")
+    is_available = models.BooleanField(default=False, verbose_name="È Disponibile")
+    
+    # Metadati
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Creato il")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Aggiornato il")
+    
+    class Meta:
+        verbose_name = "Paese Pianificazione"
+        verbose_name_plural = "Paesi Pianificazione"
+        unique_together = ['prodotto', 'codice_paese']
+        ordering = ['codice_paese']
+        indexes = [
+            models.Index(fields=['codice_paese', 'data_disponibilita']),
+            models.Index(fields=['prodotto', 'is_available']),
+            models.Index(fields=['data_tipo']),
+        ]
     
     def __str__(self):
-        return f"Col {self.column_index}: {self.header_text[:50]}..."
+        return f"{self.prodotto.sku} - {self.codice_paese} ({self.get_data_tipo_display()})"
     
-    def get_countries_display(self):
-        """Returns a readable representation of countries"""
-        return ", ".join(self.countries)
+    @property
+    def disponibilita_formattata(self):
+        """Restituisce la disponibilità in formato leggibile"""
+        if self.data_tipo == 'as_available':
+            return 'As Available'
+        elif self.data_tipo == 'data_specifica' and self.data_disponibilita:
+            return self.data_disponibilita.strftime('%d/%m/%Y')
+        elif self.data_tipo == 'to_be_determined':
+            return 'To Be Determined'
+        else:
+            return self.availability_value or 'Non specificato'
 
 
-# Data validation utility
+# Utility per validazione dati
 class PianificazioneValidator:
     """
-    Utility class for validating planning data
+    Classe utility per validare i dati di pianificazione
     """
     
     VALID_COUNTRY_CODES = {
-        'AL', 'AD', 'AM', 'AT', 'AZ', 'BA', 'BE', 'BG', 'BY', 'CH', 'CY', 'CZ', 
-        'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GE', 'GR', 'HR', 'HU', 'IE', 
-        'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MC', 'MD', 'ME', 'MK', 'MT', 'NL', 
-        'NO', 'PL', 'PT', 'RO', 'RS', 'RU', 'SE', 'SI', 'SK', 'SM', 'TR', 'UA', 
-        'UK', 'US', 'CA', 'AU', 'NZ', 'JP', 'CN', 'HK', 'SG', 'AE', 'SA', 'QA',
-        'KW', 'BH', 'OM', 'JO', 'LB', 'IL', 'EG', 'MA', 'TN', 'ZA', 'BR', 'MX',
-        'AR', 'CL', 'CO', 'PE', 'UY', 'EC', 'BO', 'PY', 'VE', 'GY', 'SR', 'GF',
-        'XK'  # Kosovo
+        'AL', 'AM', 'AT', 'AZ', 'BA', 'BE', 'BG', 'BH', 'BR', 'BY', 'CH', 'CN', 'CO', 'CY', 'CZ', 
+        'DE', 'DK', 'EE', 'ES', 'FL', 'FR', 'GB', 'GE', 'GR', 'HK', 'HR', 'HU', 'IE', 'IL', 
+        'IT', 'JO', 'JP', 'KW', 'KZ', 'LB', 'LT', 'LU', 'LV', 'MA', 'MD', 'MK', 'MO', 'MT', 
+        'MX', 'NL', 'PL', 'PT', 'QA', 'RO', 'RS', 'RU', 'SA', 'SE', 'SI', 'SK', 'TN', 'TR', 
+        'TW', 'UA', 'UK', 'US', 'UZ', 'XK'
     }
     
     @classmethod
     def validate_country_code(cls, code):
-        """Validates a country code"""
+        """Valida un codice paese"""
         if not code or not isinstance(code, str):
             return False
         
@@ -245,27 +246,27 @@ class PianificazioneValidator:
     
     @classmethod
     def parse_country_header(cls, header_text):
-        """Parses the header of a country group"""
+        """Parsa l'header di un gruppo di paesi"""
         if not header_text or not isinstance(header_text, str):
             return []
         
-        # Split by hyphens and clean
+        # Dividi per trattini e pulisci
         countries = [c.strip().upper() for c in header_text.split('-') if c.strip()]
         
-        # Filter only valid country codes
+        # Filtra solo codici paese validi
         valid_countries = [c for c in countries if cls.validate_country_code(c)]
         
         return valid_countries
     
     @classmethod
     def validate_date_string(cls, date_str):
-        """Validates a date string"""
+        """Valida una stringa di data"""
         if not date_str:
             return False
         
         try:
             from datetime import datetime
-            # Try various formats
+            # Prova vari formati
             formats = ['%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%Y-%m-%d %H:%M:%S']
             
             for fmt in formats:
@@ -275,7 +276,7 @@ class PianificazioneValidator:
                 except ValueError:
                     continue
             
-            # Check if it's 'AAP' or similar
+            # Controlla se è 'AAP' o simile
             if str(date_str).strip().upper() in ['AAP', 'ASAP', 'TBD']:
                 return True
                 

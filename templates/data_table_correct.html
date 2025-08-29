@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ pianificazione.source_file_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-2">
+    <!-- Header Minimal -->
+    <div class="row mb-2">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ pianificazione.source_file_name }} ({{ total_products }} prodotti)</h5>
+                <div>
+                    <a href="{% url 'home' %}" class="btn btn-primary btn-sm">Nuovo Upload</a>
+                    <a href="{% url 'logout' %}" class="btn btn-outline-secondary btn-sm">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ricerca -->
+    <div class="row mb-2">
+        <div class="col-12">
+            <form method="get" class="d-flex gap-2">
+                <input type="text" class="form-control form-control-sm" name="search" value="{{ search }}" 
+                       placeholder="🔍 Cerca per qualsiasi campo...">
+                <button type="submit" class="btn btn-primary btn-sm">Cerca</button>
+                {% if search %}<a href="?" class="btn btn-outline-secondary btn-sm">Reset</a>{% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabella Completa Scrollabile -->
+    <div class="table-wrapper">
+        <table class="table table-bordered table-striped table-sm">
+            <thead class="table-dark sticky-top">
+                <tr>
+                    <!-- Tutti i campi come richiesti -->
+                    <th class="fixed-col">Chiave Articolo</th>
+                    <th class="fixed-col-2">Colore x Uff. PIANIF</th>
+                    <th>Concatena 1 per MAGAZZINO</th>
+                    <th>Serie</th>
+                    <th>Merceologia</th>
+                    <th>N. Tranche</th>
+                    <th>Stag.</th>
+                    <th>SKU</th>
+                    <th>Articolo</th>
+                    <th>Colore</th>
+                    <th>Taglia</th>
+                    <th>Descrizione articolo</th>
+                    <th>DATA INIZIO CONSEGNA AI P.V. (ORIGINARIA)</th>
+                    <th>DATA SPEDIZIONE REALE STANDARD (PIM)</th>
+                    <th>IMPIANTI PER</th>
+                    <th>NOTE UFFICIO COMMERCIALE</th>
+                    <th>DATA CONSEGNA FORNITORE PRIMO 60%</th>
+                    <th>FORNITORE</th>
+                    <th>CODICE FORN</th>
+                    <th>MADE IN</th>
+                    <th>IMPIANTI RUSSIA PER DOGANALE</th>
+                    <th>CATEGORIE</th>
+                    <th>E-COMMERCE VISIBILITY (COUNTRIES)</th>
+                    
+                    <!-- Tutti i paesi -->
+                    <th class="country-col">AL</th><th class="country-col">AM</th><th class="country-col">AT</th><th class="country-col">AZ</th>
+                    <th class="country-col">BA</th><th class="country-col">BE</th><th class="country-col">BG</th><th class="country-col">BH</th>
+                    <th class="country-col">BR</th><th class="country-col">BY</th><th class="country-col">CH</th><th class="country-col">CN</th>
+                    <th class="country-col">CO</th><th class="country-col">CY</th><th class="country-col">CZ</th><th class="country-col">DE</th>
+                    <th class="country-col">DK</th><th class="country-col">EE</th><th class="country-col">ES</th><th class="country-col">FL</th>
+                    <th class="country-col">FR</th><th class="country-col">GB</th><th class="country-col">GE</th><th class="country-col">GR</th>
+                    <th class="country-col">HK</th><th class="country-col">HR</th><th class="country-col">HU</th><th class="country-col">IE</th>
+                    <th class="country-col">IL</th><th class="country-col">IT</th><th class="country-col">JO</th><th class="country-col">JP</th>
+                    <th class="country-col">KW</th><th class="country-col">KZ</th><th class="country-col">LB</th><th class="country-col">LT</th>
+                    <th class="country-col">LU</th><th class="country-col">LV</th><th class="country-col">MA</th><th class="country-col">MD</th>
+                    <th class="country-col">MK</th><th class="country-col">MO</th><th class="country-col">MT</th><th class="country-col">MX</th>
+                    <th class="country-col">NL</th><th class="country-col">PL</th><th class="country-col">PT</th><th class="country-col">QA</th>
+                    <th class="country-col">RO</th><th class="country-col">RS</th><th class="country-col">RU</th><th class="country-col">SA</th>
+                    <th class="country-col">SE</th><th class="country-col">SI</th><th class="country-col">SK</th><th class="country-col">TN</th>
+                    <th class="country-col">TR</th><th class="country-col">TW</th><th class="country-col">UA</th><th class="country-col">UK</th>
+                    <th class="country-col">US</th><th class="country-col">UZ</th><th class="country-col">XK</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prodotto in prodotti %}
+                <tr>
+                    <!-- Tutti i campi del prodotto -->
+                    <td class="fixed-col"><strong>{{ prodotto.chiave_articolo|default:"-" }}</strong></td>
+                    <td class="fixed-col-2">{{ prodotto.colore|default:"-" }}</td>
+                    <td>{{ prodotto.concatena_magazzino|default:"-" }}</td>
+                    <td>{{ prodotto.serie|default:"-" }}</td>
+                    <td>{{ prodotto.merceologia|default:"-" }}</td>
+                    <td>{{ prodotto.n_tranche|default:"-" }}</td>
+                    <td>{{ prodotto.stagione|default:"-" }}</td>
+                    <td>{{ prodotto.sku|default:"-" }}</td>
+                    <td>{{ prodotto.articolo|default:"-" }}</td>
+                    <td>{{ prodotto.colore|default:"-" }}</td>
+                    <td>{{ prodotto.taglia|default:"-" }}</td>
+                    <td>{{ prodotto.descrizione|default:"-" }}</td>
+                    <td>{{ prodotto.data_inizio_consegna|default:"-" }}</td>
+                    <td>{{ prodotto.data_spedizione_reale|default:"-" }}</td>
+                    <td>{{ prodotto.impianti_per|default:"-" }}</td>
+                    <td>{{ prodotto.note_ufficio|default:"-" }}</td>
+                    <td>{{ prodotto.data_consegna_fornitore|default:"-" }}</td>
+                    <td>{{ prodotto.fornitore|default:"-" }}</td>
+                    <td>{{ prodotto.codice_forn|default:"-" }}</td>
+                    <td>{{ prodotto.made_in|default:"-" }}</td>
+                    <td>{{ prodotto.impianti_russia|default:"-" }}</td>
+                    <td>{{ prodotto.categorie|default:"-" }}</td>
+                    <td>{{ prodotto.ecommerce_visibility|default:"-" }}</td>
+                    
+                    <!-- Paesi: mostro direttamente dalla tabella dei paesi pianificazione -->
+                    {% for country_code in country_list %}
+                        <td class="country-cell">
+                            {% for paese_data in prodotto.paesi_pianificazione.all %}
+                                {% if paese_data.codice_paese == country_code %}
+                                    {% if paese_data.data_tipo == 'as_available' %}
+                                        AAP
+                                    {% elif paese_data.data_disponibilita %}
+                                        {{ paese_data.data_disponibilita|date:"Y-m-d" }}
+                                    {% else %}
+                                        {{ paese_data.availability_value|default:"" }}
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if not prodotti %}
+        <div class="text-center py-4">
+            <p class="text-muted">Nessun prodotto trovato con i criteri di ricerca.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+/* Contenitore principale */
+.table-wrapper {
+    height: calc(100vh - 150px);
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    background: white;
+}
+
+/* Tabella */
+.table {
+    margin: 0;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.table th,
+.table td {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+/* Header fisso */
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+/* Colonne fisse a sinistra */
+.fixed-col {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 8;
+    border-right: 2px solid #000 !important;
+    min-width: 120px;
+}
+
+.fixed-col-2 {
+    position: sticky;
+    left: 120px;
+    background: white;
+    z-index: 7;
+    border-right: 2px solid #000 !important;
+    min-width: 100px;
+}
+
+.table-dark .fixed-col,
+.table-dark .fixed-col-2 {
+    background: #212529 !important;
+    color: white;
+}
+
+/* Colonne paesi */
+.country-col {
+    min-width: 40px;
+    width: 40px;
+    text-align: center;
+    background-color: #0d6efd !important;
+    color: white;
+    font-weight: bold;
+    font-size: 0.7rem;
+}
+
+.country-cell {
+    min-width: 40px;
+    width: 40px;
+    text-align: center;
+    font-size: 0.7rem;
+    padding: 0.2rem !important;
+}
+
+/* Hover effects */
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1) !important;
+}
+
+.table-hover tbody tr:hover .fixed-col,
+.table-hover tbody tr:hover .fixed-col-2 {
+    background-color: rgba(0, 123, 255, 0.2) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .table {
+        font-size: 0.65rem;
+    }
+    
+    .fixed-col {
+        min-width: 100px;
+    }
+    
+    .fixed-col-2 {
+        left: 100px;
+        min-width: 80px;
+    }
+}
+</style>
+{% endblock %}

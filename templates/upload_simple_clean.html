@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Tranche Automation - Upload{% endblock %}
+
+{% block content %}
+<div class="container-fluid vh-100 d-flex align-items-center justify-content-center bg-light">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0">
+            <div class="card-header bg-primary text-white text-center py-4">
+                <h3><i class="bi bi-file-earmark-spreadsheet"></i> Tranche Automation</h3>
+                <p class="mb-0">Carica il tuo file Excel per iniziare</p>
+            </div>
+            
+            <div class="card-body p-5">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Form Upload Semplice -->
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="upload-area text-center p-5 mb-4">
+                        <i class="bi bi-cloud-upload" style="font-size: 4rem; color: #6c757d;"></i>
+                        <h4 class="mt-3 mb-4">Seleziona il file Excel</h4>
+                        
+                        <div class="mb-4">
+                            {{ upload_form.file }}
+                        </div>
+                        
+                        <p class="text-muted">
+                            <small>
+                                <i class="bi bi-info-circle"></i>
+                                Formati supportati: .xlsx, .xls<br>
+                                Dimensione massima: 50MB
+                            </small>
+                        </p>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-lg w-100">
+                        <i class="bi bi-cpu"></i> Elabora File
+                    </button>
+                </form>
+                
+                <!-- Informazioni aggiuntive -->
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Dopo l'upload verrai reindirizzato automaticamente alla visualizzazione dati
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .upload-area {
+        border: 3px dashed #dee2e6;
+        border-radius: 1rem;
+        background: #fafafa;
+        transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover {
+        border-color: #0d6efd;
+        background: #f8f9fa;
+    }
+    
+    .card {
+        border-radius: 1rem;
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+    }
+    
+    .bg-light {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    }
+    
+    /* Stile per il campo file */
+    input[type="file"] {
+        padding: 1rem;
+        border: 2px solid #dee2e6;
+        border-radius: 0.5rem;
+        background: white;
+        width: 100%;
+        font-size: 1rem;
+    }
+    
+    input[type="file"]:focus {
+        border-color: #0d6efd;
+        outline: none;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+</style>
+{% endblock %}

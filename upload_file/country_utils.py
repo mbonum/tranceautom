@@ -229,7 +229,7 @@ class CountryColumnParser:
                 # Parse and normalize the date
                 normalized_date = cls._parse_date_from_header(date_part.strip())
                 countries_with_dates[country_code] = normalized_date
-                logger.debug(f"      📅 Extracted: {country_code} -> {normalized_date}")
+                pass  # Extracted country and date
             else:
                 logger.warning(f"Unknown country code in header: {country_code}")
         
@@ -239,7 +239,7 @@ class CountryColumnParser:
             # DON'T assign default dates here - let the data cells provide the dates
             for country in countries_only:
                 countries_with_dates[country] = None  # No default date - will be filled from data cells
-                logger.debug(f"      Country found in header: {country} (no date yet)")
+                pass  # Country found in header
         
         return countries_with_dates
     
@@ -363,7 +363,7 @@ class CountryDateExtractor:
                     for country, header_date in header_dates.items():
                         if header_date is not None:
                             country_dates[country] = header_date
-                            logger.debug(f"      -> {country}: {header_date} (from header)")
+                            pass  # Date from header
                 else:
                     # No dates in header, get from cell and apply to all countries
                     if col_idx < len(row_data):
@@ -375,7 +375,7 @@ class CountryDateExtractor:
                             for country in header_dates.keys():
                                 if country:  # Skip None countries
                                     country_dates[country] = date_value
-                                    logger.debug(f"      -> {country}: {date_value} (from cell)")
+                                    pass  # Date from cell
             
             # Legacy fallback for old format
             elif col_idx < len(row_data):
@@ -386,7 +386,7 @@ class CountryDateExtractor:
                     # Apply this date to all countries in this group
                     for country in col_info.get('countries', []):
                         country_dates[country] = date_value
-                        logger.debug(f"      -> {country}: {date_value} (from cell legacy)")
+                        pass  # Date from cell legacy
         
         # DON'T automatically assign dates to countries not found in columns
         # Only assign default date if explicitly requested
