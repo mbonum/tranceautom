@@ -1,15 +1,13 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth import views as auth_views
 from django.http import JsonResponse
 from django.urls import include, path
-from upload_file.views import (
-    user_login,
-    user_logout,
-    user_register,
+from upload_file.views_simple import (
     home,
-    download_xml,
-    planning_details,  # Aggiungiamo la vista mancante
+    # upload_file,
+    data_view,
 )
 from django.views.static import serve
 
@@ -21,12 +19,10 @@ def chrome_devtools_stub(request):
 urlpatterns = [
     path(".well-known/appspecific/com.chrome.devtools.json", chrome_devtools_stub),
     path("auth/", include("social_django.urls", namespace="social")),
-    path("login/", user_login, name="login"),
-    path("logout/", user_logout, name="logout"),
-    path("register/", user_register, name="register"),
+    path("login/", auth_views.LoginView.as_view(), name="login"),
+    path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("", home, name="home"),
-    path("planning/<int:planning_id>/", planning_details, name="planning_details"),
-    path("download-xml/", download_xml, name="download_xml"),
+    path("dati/<int:import_id>/", data_view, name="data_view"),
     path(
         "favicon.ico",
         serve,
