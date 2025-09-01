@@ -3,11 +3,11 @@ from django import forms
 
 class FileUploadForm(forms.Form):
     """
-    Form per l'upload di file Excel di pianificazione
+    Form for Excel planning file upload
     """
     file = forms.FileField(
-        label='Seleziona file Excel',
-        help_text='Carica un file Excel (.xlsx, .xls) contenente la pianificazione prodotti',
+        label='Select Excel file',
+        help_text='Upload an Excel file (.xlsx, .xls) containing product planning',    
         widget=forms.FileInput(attrs={
             'class': 'form-control',
             'accept': '.xlsx,.xls',
@@ -17,19 +17,19 @@ class FileUploadForm(forms.Form):
     
     def clean_file(self):
         """
-        Validazione del file caricato
+        Validation of uploaded file
         """
         uploaded_file = self.cleaned_data.get('file')
         
         if not uploaded_file:
-            raise forms.ValidationError('Nessun file selezionato.')
+            raise forms.ValidationError('No file selected.')
         
-        # Verifica estensione
+        # Check extension
         if not uploaded_file.name.endswith(('.xlsx', '.xls')):
-            raise forms.ValidationError('Solo file Excel (.xlsx, .xls) sono supportati.')
+            raise forms.ValidationError('Only Excel files (.xlsx, .xls) are supported.')
         
-        # Verifica dimensione (max 50MB)
+        # Check file size (max 50MB)
         if uploaded_file.size > 50 * 1024 * 1024:
-            raise forms.ValidationError('Il file è troppo grande. Dimensione massima: 50MB.')
+            raise forms.ValidationError('File is too large. Maximum size: 50MB.')
         
         return uploaded_file

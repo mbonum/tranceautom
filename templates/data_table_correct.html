@@ -8,22 +8,25 @@
     <div class="row mb-2">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ pianificazione.source_file_name }} ({{ total_products }} prodotti)</h5>
-                <div>
-                    <a href="{% url 'home' %}" class="btn btn-primary btn-sm">Nuovo Upload</a>
+                <h5 class="mb-0">{{ pianificazione.source_file_name }} ({{ total_products }} products)</h5>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'download_xml' pianificazione.id %}" class="btn btn-success btn-sm">
+                        <i class="bi bi-download"></i> Download XML
+                    </a>
+                    <a href="{% url 'home' %}" class="btn btn-primary btn-sm">New Upload</a>
                     <a href="{% url 'logout' %}" class="btn btn-outline-secondary btn-sm">Logout</a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Ricerca -->
+    <!-- Search -->
     <div class="row mb-2">
         <div class="col-12">
             <form method="get" class="d-flex gap-2">
                 <input type="text" class="form-control form-control-sm" name="search" value="{{ search }}" 
-                       placeholder="🔍 Cerca per qualsiasi campo...">
-                <button type="submit" class="btn btn-primary btn-sm">Cerca</button>
+                       placeholder="🔍 Search any field...">
+                <button type="submit" class="btn btn-primary btn-sm">Search</button>
                 {% if search %}<a href="?" class="btn btn-outline-secondary btn-sm">Reset</a>{% endif %}
             </form>
         </div>
@@ -130,7 +133,7 @@
 
     {% if not prodotti %}
         <div class="text-center py-4">
-            <p class="text-muted">Nessun prodotto trovato con i criteri di ricerca.</p>
+            <p class="text-muted">No products found with search criteria.</p>
         </div>
     {% endif %}
 </div>

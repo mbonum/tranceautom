@@ -1,6 +1,6 @@
 """
-Views semplificata per Tranche Automation
-Solo 3 pagine: Login -> Upload -> Visualizzazione Dati
+Simplified views for Tranche Automation
+Three pages: Login -> Upload -> Data Visualization
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def home(request):
     """
-    Pagina principale di upload semplificata
+    Main upload page
     """
     if request.method == 'POST':
         return upload_file(request)
@@ -39,7 +39,7 @@ def home(request):
 @login_required
 def upload_file(request):
     """
-    Gestisce l'upload e processing dei file Excel
+    Handle Excel file upload and processing
     """
     if request.method != 'POST':
         return redirect('home')
@@ -47,24 +47,24 @@ def upload_file(request):
     form = FileUploadForm(request.POST, request.FILES)
     
     if not form.is_valid():
-        logger.warning(f"Form non valido per utente {request.user.username}: {form.errors}")
-        messages.error(request, 'File non valido. Assicurati di caricare un file Excel (.xlsx)')
+        logger.warning(f"Invalid form for user {request.user.username}: {form.errors}")
+        messages.error(request, 'Invalid file. Please upload an Excel file (.xlsx)')
         return redirect('home')
     
     try:
         uploaded_file = form.cleaned_data['file']
         
-        # Il file è già validato dal form Django
+        # File is already validated by Django form
         logger.info(f"Processing file: {uploaded_file.name} ({uploaded_file.size} bytes)")
         
-        # Crea record di import
+        # Create import record
         import_record = PianificazioneImport.objects.create(
             source_file_name=uploaded_file.name,
             imported_by=request.user,
             status='pending'
         )
         
-        # Salva il file temporaneamente
+        # Save file temporarily
         temp_dir = os.path.join(settings.MEDIA_ROOT, 'temp_uploads')
         os.makedirs(temp_dir, exist_ok=True)
         
@@ -74,29 +74,29 @@ def upload_file(request):
             for chunk in uploaded_file.chunks():
                 destination.write(chunk)
         
-        # Processa il file con il nuovo processore
+        # Process file with the new processor
         try:
             processor = DjangoCountryProcessor()
             stats = processor.process_excel_to_database(temp_file_path, import_record)
             
-            # Pulizia file temporaneo
+            # Clean up temporary file
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
             
             messages.success(
                 request, 
-                f'File processato con successo! '
-                f'Prodotti: {stats["products_created"]}, '
-                f'Record paesi: {stats["country_records_created"]}'
+                f'File processed successfully! '
+                f'Products: {stats["products_created"]}, '
+                f'Country records: {stats["country_records_created"]}'
             )
             
-            logger.info(f"Upload completato con successo! Redirect a data_view per import {import_record.id}")
+            logger.info(f"Upload completed successfully! Redirecting to data_view for import {import_record.id}")
             return redirect('data_view', import_id=import_record.id)
             
         except Exception as e:
-            logger.error(f"Errore nel processing del file: {str(e)}")
+            logger.error(f"Error processing file: {str(e)}")
             
-            # Pulizia in caso di errore
+            # Clean up on error
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
             
@@ -104,24 +104,24 @@ def upload_file(request):
             import_record.error_message = str(e)
             import_record.save()
             
-            messages.error(request, f'Errore nel processing del file: {str(e)}')
+            messages.error(request, f'Error processing file: {str(e)}')
             return redirect('home')
     
     except Exception as e:
-        logger.error(f"Errore generale nell'upload: {str(e)}")
-        messages.error(request, f'Errore nell\'upload: {str(e)}')
+        logger.error(f"General upload error: {str(e)}")
+        messages.error(request, f'Upload error: {str(e)}')
         return redirect('home')
 
 
 @login_required
 def data_view(request, import_id):
     """
-    Visualizzazione dati completa senza paginazione
+    Complete data visualization without pagination
     """
     pianificazione = get_object_or_404(PianificazioneImport, id=import_id)
     prodotti = pianificazione.get_all_products().prefetch_related('paesi_pianificazione')
     
-    # Solo filtro di ricerca testuale (senza filtro paese per evitare errori SQLite)
+    # Text search filter only (no country filter to avoid SQLite errors)
     search = request.GET.get('search', '')
     
     if search:
@@ -134,7 +134,7 @@ def data_view(request, import_id):
             models.Q(colore__icontains=search)
         )
     
-    # Lista di tutti i paesi per le colonne
+    # List of all countries for columns
     country_list = [
         'AL', 'AM', 'AT', 'AZ', 'BA', 'BE', 'BG', 'BH', 'BR', 'BY', 'CH', 'CN', 'CO', 'CY', 'CZ',
         'DE', 'DK', 'EE', 'ES', 'FL', 'FR', 'GB', 'GE', 'GR', 'HK', 'HR', 'HU', 'IE', 'IL',
@@ -152,3 +152,31 @@ def data_view(request, import_id):
     }
     
     return render(request, 'data_table_correct.html', context)
+
+
+@login_required
+def download_xml(request, import_id):
+    """
+    Generate and download XML file for PIM integration
+    """
+    pianificazione = get_object_or_404(PianificazioneImport, id=import_id)
+    
+    try:
+        from .xml_generator import XMLGenerator
+        
+        # Generate XML
+        xml_generator = XMLGenerator()
+        xml_content = xml_generator.generate_planning_xml(pianificazione)
+        
+        # Prepare response for download
+        from django.http import HttpResponse
+        response = HttpResponse(xml_content, content_type='application/xml')
+        response['Content-Disposition'] = f'attachment; filename="pianificazione_{pianificazione.id}_{pianificazione.source_file_name.replace(".xlsx", "")}.xml"'
+        
+        logger.info(f"XML generated and downloaded for import {import_id} by user {request.user.username}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error generating XML for import {import_id}: {str(e)}")
+        messages.error(request, f'Error generating XML: {str(e)}')
+        return redirect('data_view', import_id=import_id)

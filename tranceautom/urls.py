@@ -8,6 +8,7 @@ from upload_file.views_simple import (
     home,
     upload_file,
     data_view,
+    download_xml,  # Aggiungi questo import
 )
 from django.views.static import serve
 
@@ -23,6 +24,7 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("", home, name="home"),
     path("dati/<int:import_id>/", data_view, name="data_view"),
+    path("download-xml/<int:import_id>/", download_xml, name="download_xml"),  # Aggiungi questa riga
     path(
         "favicon.ico",
         serve,

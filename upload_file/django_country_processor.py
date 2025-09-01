@@ -1,6 +1,6 @@
 """
-Django Country Processor - Integrazione con il database Django
-Utilizza il nuovo simple_country_processor e lo integra con i modelli Django
+Django Country Processor - Integration with Django database
+Uses the new simple_country_processor and integrates it with Django models
 """
 
 import pandas as pd
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class DjangoCountryProcessor:
     """
-    Processore per integrare il nuovo country processor con Django
+    Processor to integrate the new country processor with Django
     """
     
     def __init__(self):
@@ -30,22 +30,22 @@ class DjangoCountryProcessor:
     
     def process_excel_to_database(self, excel_file_path: str, import_record: PianificazioneImport) -> Dict:
         """
-        Processa un file Excel e salva tutto nel database Django
+        Process an Excel file and save everything to Django database
         
         Args:
-            excel_file_path (str): Percorso del file Excel
-            import_record (PianificazioneImport): Record di import da popolare
+            excel_file_path (str): Path to Excel file
+            import_record (PianificazioneImport): Import record to populate
             
         Returns:
-            Dict: Statistiche del processing
+            Dict: Processing statistics
         """
         try:
-            logger.info(f"🔄 Inizio processing Excel per import {import_record.id}")
+            logger.info(f"🔄 Starting Excel processing for import {import_record.id}")
             
             # Step 1: Load and clean Excel data
             df = load_and_clean_excel_data(excel_file_path)
             if df.empty:
-                raise Exception("Impossibile caricare dati dal file Excel")
+                raise Exception("Unable to load data from Excel file")
             
             # Step 2: Create country columns
             df_with_countries = create_country_columns(df)
@@ -59,14 +59,14 @@ class DjangoCountryProcessor:
             import_record.total_countries = len(self.all_countries)
             import_record.save()
             
-            logger.info(f"Processing completato per import {import_record.id}")
-            logger.info(f"Prodotti creati: {stats['products_created']}")
-            logger.info(f"Record paesi creati: {stats['country_records_created']}")
+            logger.info(f"Processing completed for import {import_record.id}")
+            logger.info(f"Products created: {stats['products_created']}")
+            logger.info(f"Country records created: {stats['country_records_created']}")
             
             return stats
             
         except Exception as e:
-            logger.error(f"Errore nel processing: {str(e)}")
+            logger.error(f"Error in processing: {str(e)}")
             import_record.status = 'error'
             import_record.error_message = str(e)
             import_record.save()
@@ -90,13 +90,13 @@ class DjangoCountryProcessor:
             country_columns = [col for col in df.columns if col.startswith('country_')]
             core_columns = [col for col in df.columns if not col.startswith('country_')]
             
-            logger.info(f"Salvando {len(df)} prodotti nel database...")
+            logger.info(f"Saving {len(df)} products to database...")
             
             for idx, row in df.iterrows():
-                # Crea il prodotto principale
+                # Create main product
                 prodotto_data = {}
                 
-                # Mappa i campi standard
+                # Map standard fields
                 field_mapping = {
                     'chiave_articolo': ['Chiave Articolo', 'chiave_articolo', 'chiave articolo'],
                     'concatena_magazzino': ['Concatena Magazzino', 'concatena_magazzino'],
@@ -179,7 +179,7 @@ class DjangoCountryProcessor:
                 prodotto.date_paesi = countries_with_dates
                 prodotto.save()
             
-            logger.info(f"✅ Salvati {products_created} prodotti e {country_records_created} record paesi")
+            logger.info(f"✅ Saved {products_created} products and {country_records_created} country records")
             
             return {
                 'products_created': products_created,

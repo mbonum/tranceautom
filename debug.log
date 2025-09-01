@@ -170587,3 +170587,38 @@ django.urls.exceptions.NoReverseMatch: Reverse for 'planning_details' with keywo
 [INFO] 2025-08-29 12:21:36,765 upload_file.simple_country_processor: Country columns created - New shape: (2357, 85)
 [INFO] 2025-08-29 12:21:36,765 upload_file.simple_country_processor: Added 63 country columns
 [INFO] 2025-08-29 12:21:36,766 upload_file.django_country_processor: Salvando 2357 prodotti nel database...
+[INFO] 2025-09-01 11:07:22,136 upload_file.views_simple: Processing file: piano.xlsx (2480686 bytes)
+[INFO] 2025-09-01 11:07:22,237 upload_file.simple_country_processor: Loading Excel file: C:\Tranche_automation_\trance-automation\main\media\temp_uploads\upload_14_piano.xlsx
+[INFO] 2025-09-01 11:07:23,462 upload_file.simple_country_processor: Header row identified at index: 8
+[INFO] 2025-09-01 11:07:23,501 upload_file.simple_country_processor: Data cleaned - Final shape: (2357, 29)
+[INFO] 2025-09-01 11:07:23,527 upload_file.simple_country_processor: Creating individual country columns...
+[INFO] 2025-09-01 11:07:23,532 upload_file.simple_country_processor: Found country group columns: ['AL-BG-BY-CY-EE-GE-GR-HR-IL-LB-LT-LV-MD-MK-RO-RS-RU-SI-TR-XK', 'AE-AM-AZ-BA-BH-CN-HK-IE-IT-JO-KW-KZ-MT-QA-SA-UA-UZ', 'ES-FR-PT', 'AT-BE-CH-CZ-DE-DK-HU-LU-MA-MX-NL-PL-SE-SK-TN-UK-US', 'ES-IE', 'BE-CZ-DE-DK-FR-PL-UK', 'AT-CH-SE']
+[INFO] 2025-09-01 11:07:37,501 upload_file.simple_country_processor: Country columns created - New shape: (2357, 85)
+[INFO] 2025-09-01 11:07:37,501 upload_file.simple_country_processor: Added 63 country columns
+[INFO] 2025-09-01 11:07:37,502 upload_file.django_country_processor: Salvando 2357 prodotti nel database...
+[INFO] 2025-09-01 11:08:23,430 upload_file.django_country_processor: Processing completato per import 14
+[INFO] 2025-09-01 11:08:23,430 upload_file.django_country_processor: Prodotti creati: 2357
+[INFO] 2025-09-01 11:08:23,431 upload_file.django_country_processor: Record paesi creati: 131208
+[INFO] 2025-09-01 11:08:23,433 upload_file.views_simple: Upload completato con successo! Redirect a data_view per import 14
+[INFO] 2025-09-01 12:12:06,154 upload_file.views_simple: Processing file: piano.xlsx (2480686 bytes)
+[INFO] 2025-09-01 12:12:06,188 upload_file.simple_country_processor: Loading Excel file: C:\Tranche_automation_\trance-automation\main\media\temp_uploads\upload_15_piano.xlsx
+[INFO] 2025-09-01 12:12:07,347 upload_file.simple_country_processor: Header row identified at index: 8
+[INFO] 2025-09-01 12:12:07,442 upload_file.simple_country_processor: Data cleaned - Final shape: (2357, 29)
+[INFO] 2025-09-01 12:12:07,443 upload_file.simple_country_processor: Creating individual country columns...
+[INFO] 2025-09-01 12:12:07,445 upload_file.simple_country_processor: Found country group columns: ['AL-BG-BY-CY-EE-GE-GR-HR-IL-LB-LT-LV-MD-MK-RO-RS-RU-SI-TR-XK', 'AE-AM-AZ-BA-BH-CN-HK-IE-IT-JO-KW-KZ-MT-QA-SA-UA-UZ', 'ES-FR-PT', 'AT-BE-CH-CZ-DE-DK-HU-LU-MA-MX-NL-PL-SE-SK-TN-UK-US', 'ES-IE', 'BE-CZ-DE-DK-FR-PL-UK', 'AT-CH-SE']
+[INFO] 2025-09-01 12:12:21,268 upload_file.simple_country_processor: Country columns created - New shape: (2357, 85)
+[INFO] 2025-09-01 12:12:21,269 upload_file.simple_country_processor: Added 63 country columns
+[INFO] 2025-09-01 12:12:21,269 upload_file.django_country_processor: Saving 2357 products to database...
+[INFO] 2025-09-01 12:13:07,827 upload_file.django_country_processor: Processing completed for import 15
+[INFO] 2025-09-01 12:13:07,827 upload_file.django_country_processor: Products created: 2357
+[INFO] 2025-09-01 12:13:07,828 upload_file.django_country_processor: Country records created: 131208
+[INFO] 2025-09-01 12:13:07,830 upload_file.views_simple: Upload completed successfully! Redirecting to data_view for import 15
+[INFO] 2025-09-01 12:13:42,775 upload_file.xml_generator: Generating XML for planning 15
+[INFO] 2025-09-01 12:13:48,019 upload_file.xml_generator: Generating XML for planning 15
+[INFO] 2025-09-01 12:13:52,200 upload_file.xml_generator: Generating XML for planning 15
+[INFO] 2025-09-01 12:14:00,594 upload_file.xml_generator: XML generated successfully: 2357 products
+[INFO] 2025-09-01 12:14:00,667 upload_file.views_simple: XML generated and downloaded for import 15 by user ale
+[INFO] 2025-09-01 12:14:15,090 upload_file.xml_generator: XML generated successfully: 2357 products
+[INFO] 2025-09-01 12:14:15,134 upload_file.views_simple: XML generated and downloaded for import 15 by user ale
+[INFO] 2025-09-01 12:14:27,612 upload_file.xml_generator: XML generated successfully: 2357 products
+[INFO] 2025-09-01 12:14:27,833 upload_file.views_simple: XML generated and downloaded for import 15 by user ale
