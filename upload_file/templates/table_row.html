@@ -1,0 +1,288 @@
+<!-- Table Row for Product -->
+<tr class="product-row" data-product-id="{{ product.id }}">
+    <!-- Checkbox -->
+    <td>
+        <input type="checkbox" class="form-check-input product-selector" value="{{ product.id }}">
+    </td>
+    
+    <!-- Fixed Column: Chiave Articolo -->
+    <td class="fixed-col">
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="chiave_articolo" 
+               data-original="{{ product.chiave_articolo }}"
+               value="{{ product.chiave_articolo|default:'' }}" 
+               placeholder="Article key" 
+               title="{{ product.chiave_articolo|default:'' }}">
+    </td>
+    
+    <!-- SKU -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="sku" 
+               data-original="{{ product.sku }}"
+               value="{{ product.sku|default:'' }}" 
+               placeholder="SKU"
+               title="{{ product.sku|default:'' }}">
+    </td>
+    
+    <!-- Articolo -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="articolo" 
+               data-original="{{ product.articolo }}"
+               value="{{ product.articolo|default:'' }}" 
+               placeholder="Article"
+               title="{{ product.articolo|default:'' }}">
+    </td>
+    
+    <!-- Colore -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="colore" 
+               data-original="{{ product.colore }}"
+               value="{{ product.colore|default:'' }}" 
+               placeholder="Color"
+               title="{{ product.colore|default:'' }}">
+    </td>
+    
+    <!-- Taglia -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="taglia" 
+               data-original="{{ product.taglia }}"
+               value="{{ product.taglia|default:'' }}" 
+               placeholder="Size"
+               title="{{ product.taglia|default:'' }}">
+    </td>
+    
+    <!-- Descrizione -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="descrizione" 
+               data-original="{{ product.descrizione }}"
+               value="{{ product.descrizione|default:'' }}" 
+               placeholder="Description"
+               title="{{ product.descrizione|default:'' }}">
+    </td>
+    
+    <!-- Fornitore -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="fornitore" 
+               data-original="{{ product.fornitore }}"
+               value="{{ product.fornitore|default:'' }}" 
+               placeholder="Supplier"
+               title="{{ product.fornitore|default:'' }}">
+    </td>
+    
+    <!-- Made In -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="made_in" 
+               data-original="{{ product.made_in }}"
+               value="{{ product.made_in|default:'' }}" 
+               placeholder="Made in"
+               title="{{ product.made_in|default:'' }}">
+    </td>
+    
+    <!-- Serie -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="serie" 
+               data-original="{{ product.serie }}"
+               value="{{ product.serie|default:'' }}" 
+               placeholder="Series"
+               title="{{ product.serie|default:'' }}">
+    </td>
+    
+    <!-- Stagione -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="stagione" 
+               data-original="{{ product.stagione }}"
+               value="{{ product.stagione|default:'' }}" 
+               placeholder="Season"
+               title="{{ product.stagione|default:'' }}">
+    </td>
+    
+    <!-- Tranche -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="n_tranche" 
+               data-original="{{ product.n_tranche }}"
+               value="{{ product.n_tranche|default:'' }}" 
+               placeholder="Tranche"
+               title="{{ product.n_tranche|default:'' }}">
+    </td>
+    
+    <!-- Merceologia -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="merceologia" 
+               data-original="{{ product.merceologia }}"
+               value="{{ product.merceologia|default:'' }}" 
+               placeholder="Merchandise"
+               title="{{ product.merceologia|default:'' }}">
+    </td>
+    
+    <!-- Data Consegna -->
+    <td>
+        <input type="date" class="editable form-control-plaintext" 
+               data-field="data_inizio_consegna" 
+               data-original="{{ product.data_inizio_consegna }}"
+               value="{{ product.data_inizio_consegna|default:'' }}"
+               title="Delivery date: {{ product.data_inizio_consegna|default:'Not set' }}">
+    </td>
+    
+    <!-- Data Spedizione -->
+    <td>
+        <input type="date" class="editable form-control-plaintext" 
+               data-field="data_spedizione_reale" 
+               data-original="{{ product.data_spedizione_reale }}"
+               value="{{ product.data_spedizione_reale|default:'' }}"
+               title="Shipping date: {{ product.data_spedizione_reale|default:'Not set' }}">
+    </td>
+    
+    <!-- Codice Forn -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="codice_forn" 
+               data-original="{{ product.codice_forn }}"
+               value="{{ product.codice_forn|default:'' }}" 
+               placeholder="Supplier code"
+               title="{{ product.codice_forn|default:'' }}">
+    </td>
+    
+    <!-- Note Ufficio -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="note_ufficio" 
+               data-original="{{ product.note_ufficio }}"
+               value="{{ product.note_ufficio|default:'' }}" 
+               placeholder="Office notes"
+               title="{{ product.note_ufficio|default:'' }}">
+    </td>
+    
+    <!-- Paesi Disponibili -->
+    <td>
+        <div class="countries-preview">
+            {% for paese in product.paesi_pianificazione.all|slice:":4" %}
+                <span class="country-tag 
+                    {% if paese.data_tipo == 'as_available' %}aap
+                    {% elif paese.data_disponibilita %}date
+                    {% elif paese.is_available %}available
+                    {% endif %}">
+                    {{ paese.codice_paese }}{% if paese.data_disponibilita %}:{{ paese.data_disponibilita|date:"d/m" }}{% endif %}
+                </span>
+            {% endfor %}
+            {% if product.paesi_pianificazione.count > 4 %}
+                <a href="#" class="countries-more" 
+                   data-bs-toggle="modal" 
+                   data-bs-target="#country-modal"
+                   data-product-id="{{ product.id }}"
+                   title="Click to edit all countries">
+                    +{{ product.paesi_pianificazione.count|add:"-4" }}
+                </a>
+            {% elif product.paesi_pianificazione.count > 0 %}
+                <a href="#" class="countries-more" 
+                   data-bs-toggle="modal" 
+                   data-bs-target="#country-modal"
+                   data-product-id="{{ product.id }}"
+                   title="Click to edit countries">
+                    <i class="bi bi-pencil-square"></i>
+                </a>
+            {% else %}
+                <a href="#" class="countries-more" 
+                   data-bs-toggle="modal" 
+                   data-bs-target="#country-modal"
+                   data-product-id="{{ product.id }}"
+                   title="No countries set - click to add">
+                    <i class="bi bi-plus-circle"></i> Add
+                </a>
+            {% endif %}
+        </div>
+    </td>
+    
+    <!-- Actions -->
+    <td>
+        <div class="d-flex gap-1">
+            <button type="button" class="action-btn save-btn" 
+                    data-product-id="{{ product.id }}" 
+                    style="display: none;"
+                    title="Save changes">
+                <i class="bi bi-floppy"></i>
+            </button>
+            <button type="button" class="action-btn undo-btn" 
+                    data-product-id="{{ product.id }}" 
+                    style="display: none;"
+                    title="Undo changes">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+
+<style>
+/* Additional styles for table rows */
+.product-row.modified {
+    border-left: 4px solid #28a745;
+    background-color: rgba(40,167,69,0.02);
+}
+
+.product-row.saving {
+    opacity: 0.6;
+    background-color: rgba(255,193,7,0.05);
+}
+
+.product-row.has-errors {
+    border-left: 4px solid #dc3545;
+    background-color: rgba(220,53,69,0.02);
+}
+
+.form-control-plaintext {
+    padding: 4px 8px;
+    margin: 0;
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 0.85rem;
+    width: 100%;
+    min-height: auto;
+}
+
+.form-control-plaintext:focus {
+    border-color: #007bff;
+    background: white;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+    outline: none;
+}
+
+.form-control-plaintext.modified {
+    border-color: #28a745;
+    background-color: rgba(40,167,69,0.1);
+}
+
+.form-control-plaintext.error {
+    border-color: #dc3545;
+    background-color: rgba(220,53,69,0.1);
+}
+
+/* Save indicator */
+.product-row.saving::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 4px;
+    height: 100%;
+    background: #ffc107;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+</style>
+
+
+

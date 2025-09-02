@@ -15,9 +15,12 @@ import environ
 import logging
 
 # import os
-from pathlib import Path
 from django.contrib.messages import constants as messages
+from pathlib import Path
+# import google.auth
+# from google.cloud import secretmanager
 
+logger = logging.getLogger(__name__)
 # import google.auth
 # from google.cloud import secretmanager
 
@@ -30,7 +33,7 @@ environ.Env.read_env(BASE_DIR / ".env")
 env = environ.Env(DEBUG=(bool, False))
 
 SECRET_KEY = env("SECRET_KEY")
-DEBUG = env.bool("DEBUG", default=False)
+DEBUG = True
 
 ALLOWED_HOSTS = ["tranche-autom-895419303996.europe-west3.run.app", "tranche-autom-hopp43txpa-ey.a.run.app", "localhost", "127.0.0.1"]
 
@@ -76,7 +79,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "tranceautom.wsgi.application"
-
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -175,7 +177,20 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+
+# Directory where static files are collected for production
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Additional directories where Django looks for static files
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # Aggiungi questa linea!
+]
+
+# Static files finders (aggiungi se non esiste)
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
 
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -219,18 +234,45 @@ MESSAGE_TAGS = {
     messages.ERROR: "danger",
 }
 
+# Logging Configuration
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{levelname}] {asctime} {name}: {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+        "file": {
+            "class": "logging.FileHandler",
+            "filename": "debug.log",
+            "formatter": "verbose",
         },
     },
+    "root": {
+        "handlers": ["console", "file"],
+        "level": "INFO",
+    },
     "loggers": {
-        "django.db.backends": {
+        "upload_file": {
+            "handlers": ["console", "file"],
             "level": "DEBUG",
+            "propagate": False,
+        },
+        "django": {
             "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
