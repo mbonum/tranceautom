@@ -61,6 +61,7 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated' # Set to --no-allow-unauthenticated for private services
       - '--port=8080'
+      - '--memory=1Gi'
       - '--set-secrets=SECRET_KEY=django-secret-key:latest,OKTA_ISSUER=okta-issuer:latest,OKTA_CLIENT_ID=okta-client-id:latest,OKTA_CLIENT_SECRET=okta-client-secret:latest,DATABASE_TRANCHE_URL=DATABASE_TRANCHE_URL:latest,DB_TRANCHE_PASSWORD=DB_TRANCHE_PASSWORD:latest'
       - '--set-cloudsql-instances=${_DB_INSTANCE}'
       - '--vpc-connector=projects/${PROJECT_ID}/locations/${_DEPLOY_REGION}/connectors/tranche-autom-connector'
