@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import models
 from django.conf import settings
+from django.http import JsonResponse
 import os
 import logging
 
@@ -116,16 +117,17 @@ def upload_file(request):
 @login_required
 def data_view(request, import_id):
     """
-    Complete data visualization without pagination
+    Modern data visualization with pagination and AJAX support
     """
     pianificazione = get_object_or_404(PianificazioneImport, id=import_id)
-    prodotti = pianificazione.get_all_products().prefetch_related('paesi_pianificazione')
     
-    # Text search filter only (no country filter to avoid SQLite errors)
+    # Get all products with relations
+    prodotti_base = pianificazione.get_all_products().prefetch_related('paesi_pianificazione')
+    
+    # Apply search filter
     search = request.GET.get('search', '')
-    
     if search:
-        prodotti = prodotti.filter(
+        prodotti_base = prodotti_base.filter(
             models.Q(chiave_articolo__icontains=search) |
             models.Q(descrizione__icontains=search) |
             models.Q(sku__icontains=search) |
@@ -134,24 +136,59 @@ def data_view(request, import_id):
             models.Q(colore__icontains=search)
         )
     
-    # List of all countries for columns
-    country_list = [
-        'AL', 'AM', 'AT', 'AZ', 'BA', 'BE', 'BG', 'BH', 'BR', 'BY', 'CH', 'CN', 'CO', 'CY', 'CZ',
-        'DE', 'DK', 'EE', 'ES', 'FL', 'FR', 'GB', 'GE', 'GR', 'HK', 'HR', 'HU', 'IE', 'IL',
-        'IT', 'JO', 'JP', 'KW', 'KZ', 'LB', 'LT', 'LU', 'LV', 'MA', 'MD', 'MK', 'MO', 'MT',
-        'MX', 'NL', 'PL', 'PT', 'QA', 'RO', 'RS', 'RU', 'SA', 'SE', 'SI', 'SK', 'TN', 'TR',
-        'TW', 'UA', 'UK', 'US', 'UZ', 'XK'
-    ]
+    # Apply additional filters
+    date_filter = request.GET.get('date-filter')
+    if date_filter == 'no_delivery_date':
+        prodotti_base = prodotti_base.filter(data_inizio_consegna__isnull=True)
+    elif date_filter == 'past_due':
+        from datetime import date
+        prodotti_base = prodotti_base.filter(data_inizio_consegna__lt=date.today())
     
+    category_filter = request.GET.get('category-filter')
+    if category_filter:
+        prodotti_base = prodotti_base.filter(categorie__icontains=category_filter)
+    
+    # Pagination
+    per_page = int(request.GET.get('per_page', 20))
+    page = int(request.GET.get('page', 1))
+    
+    paginator = Paginator(prodotti_base, per_page)
+    prodotti = paginator.get_page(page)
+    
+    # For AJAX requests, return JSON data
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        from django.template.loader import render_to_string
+        
+        # Render product table rows HTML
+        products_html = ''
+        for product in prodotti:
+            products_html += render_to_string('table_row.html', {'product': product})
+        
+        return JsonResponse({
+            'html': products_html,
+            'products': [{'id': p.id, 'name': p.chiave_articolo} for p in prodotti],
+            'pagination': {
+                'current_page': page,
+                'total_pages': paginator.num_pages,
+                'has_next': prodotti.has_next(),
+                'has_previous': prodotti.has_previous(),
+                'start': prodotti.start_index() if prodotti else 0,
+                'end': prodotti.end_index() if prodotti else 0,
+                'total': paginator.count,
+            }
+        })
+    
+    # Regular page load
     context = {
         'pianificazione': pianificazione,
         'prodotti': prodotti,
         'search': search,
-        'total_products': prodotti.count(),
-        'country_list': country_list,
+        'total_products': paginator.count,
+        'current_page': page,
+        'per_page': per_page,
     }
     
-    return render(request, 'data_table_correct.html', context)
+    return render(request, 'modern_table_view.html', context)
 
 
 @login_required

@@ -170622,3 +170622,29 @@ django.urls.exceptions.NoReverseMatch: Reverse for 'planning_details' with keywo
 [INFO] 2025-09-01 12:14:15,134 upload_file.views_simple: XML generated and downloaded for import 15 by user ale
 [INFO] 2025-09-01 12:14:27,612 upload_file.xml_generator: XML generated successfully: 2357 products
 [INFO] 2025-09-01 12:14:27,833 upload_file.views_simple: XML generated and downloaded for import 15 by user ale
+[INFO] 2025-09-01 14:45:08,648 upload_file.views_simple: Processing file: piano.xlsx (2480686 bytes)
+[INFO] 2025-09-01 14:45:08,683 upload_file.simple_country_processor: Loading Excel file: C:\Tranche_automation_\trance-automation\main\media\temp_uploads\upload_16_piano.xlsx
+[INFO] 2025-09-01 14:45:09,532 upload_file.simple_country_processor: Header row identified at index: 8
+[INFO] 2025-09-01 14:45:09,559 upload_file.simple_country_processor: Data cleaned - Final shape: (2357, 29)
+[INFO] 2025-09-01 14:45:09,559 upload_file.simple_country_processor: Creating individual country columns...
+[INFO] 2025-09-01 14:45:09,560 upload_file.simple_country_processor: Found country group columns: ['AL-BG-BY-CY-EE-GE-GR-HR-IL-LB-LT-LV-MD-MK-RO-RS-RU-SI-TR-XK', 'AE-AM-AZ-BA-BH-CN-HK-IE-IT-JO-KW-KZ-MT-QA-SA-UA-UZ', 'ES-FR-PT', 'AT-BE-CH-CZ-DE-DK-HU-LU-MA-MX-NL-PL-SE-SK-TN-UK-US', 'ES-IE', 'BE-CZ-DE-DK-FR-PL-UK', 'AT-CH-SE']
+[INFO] 2025-09-01 14:45:20,965 upload_file.simple_country_processor: Country columns created - New shape: (2357, 85)
+[INFO] 2025-09-01 14:45:20,966 upload_file.simple_country_processor: Added 63 country columns
+[INFO] 2025-09-01 14:45:20,966 upload_file.django_country_processor: Saving 2357 products to database...
+[INFO] 2025-09-01 14:46:29,310 upload_file.django_country_processor: Processing completed for import 16
+[INFO] 2025-09-01 14:46:29,311 upload_file.django_country_processor: Products created: 2357
+[INFO] 2025-09-01 14:46:29,312 upload_file.django_country_processor: Country records created: 131208
+[INFO] 2025-09-01 14:46:29,316 upload_file.views_simple: Upload completed successfully! Redirecting to data_view for import 16
+[INFO] 2025-09-01 15:08:33,798 upload_file.views_simple: Processing file: piano.xlsx (2480686 bytes)
+[INFO] 2025-09-01 15:08:33,825 upload_file.simple_country_processor: Loading Excel file: C:\Tranche_automation_\trance-automation\main\media\temp_uploads\upload_17_piano.xlsx
+[INFO] 2025-09-01 15:08:34,515 upload_file.simple_country_processor: Header row identified at index: 8
+[INFO] 2025-09-01 15:08:34,537 upload_file.simple_country_processor: Data cleaned - Final shape: (2357, 29)
+[INFO] 2025-09-01 15:08:34,537 upload_file.simple_country_processor: Creating individual country columns...
+[INFO] 2025-09-01 15:08:34,537 upload_file.simple_country_processor: Found country group columns: ['AL-BG-BY-CY-EE-GE-GR-HR-IL-LB-LT-LV-MD-MK-RO-RS-RU-SI-TR-XK', 'AE-AM-AZ-BA-BH-CN-HK-IE-IT-JO-KW-KZ-MT-QA-SA-UA-UZ', 'ES-FR-PT', 'AT-BE-CH-CZ-DE-DK-HU-LU-MA-MX-NL-PL-SE-SK-TN-UK-US', 'ES-IE', 'BE-CZ-DE-DK-FR-PL-UK', 'AT-CH-SE']
+[INFO] 2025-09-01 15:08:46,259 upload_file.simple_country_processor: Country columns created - New shape: (2357, 85)
+[INFO] 2025-09-01 15:08:46,260 upload_file.simple_country_processor: Added 63 country columns
+[INFO] 2025-09-01 15:08:46,260 upload_file.django_country_processor: Saving 2357 products to database...
+[INFO] 2025-09-01 15:09:35,440 upload_file.django_country_processor: Processing completed for import 17
+[INFO] 2025-09-01 15:09:35,441 upload_file.django_country_processor: Products created: 2357
+[INFO] 2025-09-01 15:09:35,441 upload_file.django_country_processor: Country records created: 131208
+[INFO] 2025-09-01 15:09:35,443 upload_file.views_simple: Upload completed successfully! Redirecting to data_view for import 17

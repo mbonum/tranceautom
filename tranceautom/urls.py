@@ -8,7 +8,13 @@ from upload_file.views_simple import (
     home,
     upload_file,
     data_view,
-    download_xml,  # Aggiungi questo import
+    download_xml,
+)
+from upload_file.api_views import (
+    save_products,
+    get_product_details,
+    bulk_update_products,
+    validate_product_data,
 )
 from django.views.static import serve
 
@@ -24,7 +30,14 @@ urlpatterns = [
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("", home, name="home"),
     path("dati/<int:import_id>/", data_view, name="data_view"),
-    path("download-xml/<int:import_id>/", download_xml, name="download_xml"),  # Aggiungi questa riga
+    path("download-xml/<int:import_id>/", download_xml, name="download_xml"),
+    
+    # API endpoints
+    path("api/products/save/", save_products, name="api_save_products"),
+    path("api/products/<int:product_id>/", get_product_details, name="api_product_details"),
+    path("api/products/bulk-update/", bulk_update_products, name="api_bulk_update"),
+    path("api/products/validate/", validate_product_data, name="api_validate_product"),
+    
     path(
         "favicon.ico",
         serve,
