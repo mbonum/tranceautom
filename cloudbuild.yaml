@@ -82,7 +82,7 @@ substitutions:
   _ALLOWED_HOSTS: 'tranche-autom-hopp43txpa-ey.a.run.app,tranche-autom-895419303996.europe-west3.run.app'
 
 # Timeout for the entire build
-timeout: '1800s'
+timeout: '3600s'
 
 # Configure logging to only use Cloud Logging
 options:

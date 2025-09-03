@@ -111,13 +111,15 @@ AUTHENTICATION_BACKENDS = [
     "social_core.backends.okta.OktaOAuth2",  # Okta authentication
     "django.contrib.auth.backends.ModelBackend",  # Standard Django auth
 ]
-
+# Client ID: 0oav1p8zuzd38tELD697
+# Client Secret: ZiUGPOxsQu9q2vAAEs1CzJyEF6ZpM9vkHvABdIHPb_Xxr47T45aGuD5Gw8NIZZ2j
+# Endpoint Discovery: https://calzedoniagroup.okta.com/.well-known/openid-configuration
 # Okta configuration
 SOCIAL_AUTH_OKTA_OAUTH2_KEY = env("OKTA_CLIENT_ID")
 SOCIAL_AUTH_OKTA_OAUTH2_SECRET = env("OKTA_CLIENT_SECRET")
 # The issuer URL often needs the authorization server path.
-# Verify this path in your Okta admin console under API > Authorization Servers.
-SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER") + "/oauth2/default"
+# Verify this path in your Okta admin console under API > Authorization Servers. + "/oauth2/default"
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER")
 
 # Optional: User creation settings
 SOCIAL_AUTH_USER_MODEL = "auth.User"
@@ -256,6 +258,7 @@ LOGGING = {
         "file": {
             "class": "logging.FileHandler",
             "filename": "debug.log",
+            "encoding": "utf-8",
             "formatter": "verbose",
         },
     },
