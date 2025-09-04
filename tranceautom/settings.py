@@ -35,7 +35,12 @@ env = environ.Env(DEBUG=(bool, False))
 SECRET_KEY = env("SECRET_KEY")
 DEBUG = True
 
-ALLOWED_HOSTS = ["tranche-autom-895419303996.europe-west3.run.app", "tranche-autom-hopp43txpa-ey.a.run.app", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = [
+    "tranche-autom-895419303996.europe-west3.run.app",
+    "tranche-autom-hopp43txpa-ey.a.run.app",
+    "localhost",
+    "127.0.0.1",
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -72,6 +77,8 @@ TEMPLATES = [
             "context_processors": [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
                 "django.contrib.messages.context_processors.messages",
             ],
         },
@@ -80,9 +87,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "tranceautom.wsgi.application"
 
+SOCIAL_AUTH_REQUIRE_POST = True
+
+SOCIAL_AUTH_URL_NAMESPACE = "social"
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-#
 # This setup uses django-environ to configure the database.
 # - For local development, it reads DATABASE_URL from the .env file, which
 #   should point to the local Cloud SQL Auth Proxy (e.g., postgresql://user:pass@127.0.0.1:5432/db).
@@ -92,7 +102,7 @@ WSGI_APPLICATION = "tranceautom.wsgi.application"
 DATABASES = {
     "default": env.db_url(
         "DATABASE_TRANCHE_URL",
-        default=f"sqlite:///{ (BASE_DIR / 'db.sqlite3').as_posix() }",
+        default=f"sqlite:///{(BASE_DIR / 'db.sqlite3').as_posix()}",
     )
 }
 
