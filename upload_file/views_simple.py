@@ -185,6 +185,12 @@ def data_view(request, import_id):
                     "total_pages": paginator.num_pages,
                     "has_next": prodotti.has_next(),
                     "has_previous": prodotti.has_previous(),
+                    "next_page_number": prodotti.next_page_number()
+                    if prodotti.has_next()
+                    else None,
+                    "previous_page_number": prodotti.previous_page_number()
+                    if prodotti.has_previous()
+                    else None,
                     "start": prodotti.start_index() if prodotti else 0,
                     "end": prodotti.end_index() if prodotti else 0,
                     "total": paginator.count,
