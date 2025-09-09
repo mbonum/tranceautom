@@ -321,3 +321,76 @@ def validate_product_data(request):
     except Exception as e:
         logger.error(f"Error in validation: {str(e)}")
         return JsonResponse({'error': 'Internal server error'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def apply_visibility_rules_to_product(request, product_id):
+    """
+    API endpoint to apply E-commerce Visibility rules to a specific product
+    """
+    try:
+        product = get_object_or_404(Prodotto, id=product_id)
+        
+        if not product.ecommerce_visibility:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No E-commerce Visibility rule set for this product'
+            }, status=400)
+        
+        # Import required modules
+        from .visibility_rules import EcommerceVisibilityProcessor
+        
+        # Create processor and apply rules
+        processor = EcommerceVisibilityProcessor()
+        allowed_countries = processor.process_visibility_rule(
+            product.ecommerce_visibility,
+            {
+                'taglia': product.taglia,
+                'coppa': getattr(product, 'coppa', ''),  # If you have cup field
+            }
+        )
+        
+        logger.info(f"Applying visibility rule '{product.ecommerce_visibility}' to product {product_id}")
+        logger.info(f"Allowed countries: {sorted(allowed_countries)}")
+        
+        # Clear existing country planning for this product
+        from .models import PaesePianificazione
+        PaesePianificazione.objects.filter(prodotto=product).delete()
+        
+        # Create new country planning records
+        new_records = []
+        for country_code in allowed_countries:
+            new_records.append(PaesePianificazione(
+                prodotto=product,
+                codice_paese=country_code,
+                data_tipo='as_available',  # Default to AAP
+                is_available=True,
+                availability_value='AAP',
+                source_column='ecommerce_visibility_rule'
+            ))
+        
+        # Bulk create new records
+        if new_records:
+            PaesePianificazione.objects.bulk_create(new_records, ignore_conflicts=True)
+        
+        # Update product JSON fields
+        product.paesi_disponibili = list(allowed_countries)
+        product.paesi_aap = list(allowed_countries)
+        product.paesi_con_date = []
+        product.date_paesi = {}
+        product.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Visibility rules applied successfully. {len(allowed_countries)} countries configured.',
+            'countries_applied': sorted(allowed_countries),
+            'rule_applied': product.ecommerce_visibility
+        })
+        
+    except Exception as e:
+        logger.error(f"Error applying visibility rules to product {product_id}: {str(e)}")
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Failed to apply visibility rules: {str(e)}'
+        }, status=500)

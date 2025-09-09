@@ -15,6 +15,7 @@ from upload_file.api_views import (
     get_product_details,
     bulk_update_products,
     validate_product_data,
+    apply_visibility_rules_to_product,
 )
 # from django.views.static import serve
 from django.contrib.staticfiles.storage import staticfiles_storage
@@ -37,6 +38,7 @@ urlpatterns = [
     # API endpoints
     path("api/products/save/", save_products, name="api_save_products"),
     path("api/products/<int:product_id>/", get_product_details, name="api_product_details"),
+    path("api/products/<int:product_id>/apply-visibility-rules/", apply_visibility_rules_to_product, name="apply_visibility_rules_to_product"),
     path("api/products/bulk-update/", bulk_update_products, name="api_bulk_update"),
     path("api/products/validate/", validate_product_data, name="api_validate_product"),
     

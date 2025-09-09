@@ -5,14 +5,24 @@
         <input type="checkbox" class="form-check-input product-selector" value="{{ product.id }}">
     </td>
     
-    <!-- Fixed Column: Chiave Articolo -->
-    <td class="fixed-col">
+    <!-- Chiave Articolo -->
+    <td>
         <input type="text" class="editable form-control-plaintext" 
                data-field="chiave_articolo" 
                data-original="{{ product.chiave_articolo }}"
                value="{{ product.chiave_articolo|default:'' }}" 
-               placeholder="Article key" 
+               placeholder="Article key"
                title="{{ product.chiave_articolo|default:'' }}">
+    </td>
+    
+    <!-- Concatena Magazzino -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="concatena_magazzino" 
+               data-original="{{ product.concatena_magazzino }}"
+               value="{{ product.concatena_magazzino|default:'' }}" 
+               placeholder="Warehouse"
+               title="{{ product.concatena_magazzino|default:'' }}">
     </td>
     
     <!-- SKU -->
@@ -65,26 +75,6 @@
                title="{{ product.descrizione|default:'' }}">
     </td>
     
-    <!-- Fornitore -->
-    <td>
-        <input type="text" class="editable form-control-plaintext" 
-               data-field="fornitore" 
-               data-original="{{ product.fornitore }}"
-               value="{{ product.fornitore|default:'' }}" 
-               placeholder="Supplier"
-               title="{{ product.fornitore|default:'' }}">
-    </td>
-    
-    <!-- Made In -->
-    <td>
-        <input type="text" class="editable form-control-plaintext" 
-               data-field="made_in" 
-               data-original="{{ product.made_in }}"
-               value="{{ product.made_in|default:'' }}" 
-               placeholder="Made in"
-               title="{{ product.made_in|default:'' }}">
-    </td>
-    
     <!-- Serie -->
     <td>
         <input type="text" class="editable form-control-plaintext" 
@@ -127,40 +117,62 @@
     
     <!-- Data Consegna -->
     <td>
-        <input type="date" class="editable form-control-plaintext" 
+        <input type="text" class="editable form-control-plaintext" 
                data-field="data_inizio_consegna" 
                data-original="{{ product.data_inizio_consegna }}"
                value="{{ product.data_inizio_consegna|default:'' }}"
+               placeholder="Delivery date"
                title="Delivery date: {{ product.data_inizio_consegna|default:'Not set' }}">
     </td>
     
     <!-- Data Spedizione -->
     <td>
-        <input type="date" class="editable form-control-plaintext" 
+        <input type="text" class="editable form-control-plaintext" 
                data-field="data_spedizione_reale" 
                data-original="{{ product.data_spedizione_reale }}"
                value="{{ product.data_spedizione_reale|default:'' }}"
+               placeholder="Shipping date"
                title="Shipping date: {{ product.data_spedizione_reale|default:'Not set' }}">
     </td>
     
-    <!-- Codice Forn -->
+    <!-- Impianti Per -->
     <td>
         <input type="text" class="editable form-control-plaintext" 
-               data-field="codice_forn" 
-               data-original="{{ product.codice_forn }}"
-               value="{{ product.codice_forn|default:'' }}" 
-               placeholder="Supplier code"
-               title="{{ product.codice_forn|default:'' }}">
+               data-field="impianti_per" 
+               data-original="{{ product.impianti_per }}"
+               value="{{ product.impianti_per|default:'' }}" 
+               placeholder="Plants for"
+               title="{{ product.impianti_per|default:'' }}">
     </td>
     
-    <!-- Note Ufficio -->
+    <!-- Data Consegna Fornitore -->
     <td>
         <input type="text" class="editable form-control-plaintext" 
-               data-field="note_ufficio" 
-               data-original="{{ product.note_ufficio }}"
-               value="{{ product.note_ufficio|default:'' }}" 
-               placeholder="Office notes"
-               title="{{ product.note_ufficio|default:'' }}">
+               data-field="data_consegna_fornitore" 
+               data-original="{{ product.data_consegna_fornitore }}"
+               value="{{ product.data_consegna_fornitore|default:'' }}"
+               placeholder="Supplier delivery"
+               title="Supplier delivery: {{ product.data_consegna_fornitore|default:'Not set' }}">
+    </td>
+    
+    <!-- Categorie -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="categorie" 
+               data-original="{{ product.categorie }}"
+               value="{{ product.categorie|default:'' }}" 
+               placeholder="Categories"
+               title="{{ product.categorie|default:'' }}">
+    </td>
+    
+    <!-- E-commerce Visibility -->
+    <td>
+        <input type="text" class="editable form-control-plaintext" 
+               data-field="ecommerce_visibility" 
+               data-original="{{ product.ecommerce_visibility }}"
+               value="{{ product.ecommerce_visibility|default:'' }}" 
+               placeholder="E-commerce visibility"
+               title="{{ product.ecommerce_visibility|default:'' }}">
     </td>
     
     <!-- Paesi Disponibili -->

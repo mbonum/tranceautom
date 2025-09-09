@@ -1,11 +1,20 @@
 """
-E-commerce visibility rules
-Complete mapping of visibility rules and applicable countries
+E-commerce visibility rules processor
+Complete mapping of visibility rules and applicable countries based on official documentation
 """
 
-class VisibilityRules:
+import re
+import logging
+import pandas as pd
+from typing import List, Dict, Set, Optional, Union
+
+logger = logging.getLogger(__name__)
+
+
+class EcommerceVisibilityProcessor:
     """
-    Class containing all e-commerce visibility rules
+    Advanced processor for e-commerce visibility rules
+    Based on official Intimissimi documentation
     """
     
     # Complete list of all possible countries
@@ -17,505 +26,374 @@ class VisibilityRules:
         'TW', 'UA', 'UK', 'US', 'UZ', 'XK'
     ]
     
-    # Complete visibility rules
-    RULES = {
-        
-        # === BASE RULES ===
-        "ESTERO": {
-            "type": "exclude",
-            "countries": ["IT"],
-            "description": "All countries, except IT"
-        },
-        
-        "MONDO": {
-            "type": "include", 
-            "countries": "ALL",
-            "description": "All countries"
-        },
-        
-        "WORLD": {
-            "type": "include",
-            "countries": "ALL", 
-            "description": "All countries"
-        },
-        
-        "OLANDA": {
-            "type": "include",
-            "countries": ["NL"],
-            "description": "Only Holland"
-        },
-        
-        "ITALIA": {
-            "type": "include",
-            "countries": ["IT"],
-            "description": "Only Italy"
-        },
-        
-        # === WORLD EXCEPT RULES ===
-        "MONDO-CN": {
-            "type": "exclude",
-            "countries": ["CN"],
-            "description": "All countries, except CN"
-        },
-        
-        "MONDO-CN-HK-JP-MO": {
-            "type": "exclude", 
-            "countries": ["CN", "HK", "JP", "MO"],
-            "description": "All countries, except for CN, HK, JP, MO"
-        },
-        
-        "MONDO-ES-DE-UK-FR-HK-OLANDA-GIAPPONE-TAIWAN-USA": {
-            "type": "exclude",
-            "countries": ["ES", "DE", "UK", "FR", "HK", "NL", "JP", "TW", "US"],
-            "description": "All countries, except ES, DE, UK, FR, HK, NL, JP, TW, US"
-        },
-        
-        "MONDO MENO FL": {
-            "type": "exclude", 
-            "countries": ["FL"],
-            "description": "All countries, except Florida"
-        },
-        
-        "MONDO MENO ITALIA-CN-HK-JP-MO": {
-            "type": "exclude",
-            "countries": ["IT", "CN", "HK", "JP", "MO"],
-            "description": "All countries except IT, CN, HK, JP, MO"
-        },
-        
-        "MONDO MENO ITALIA - CN": {
-            "type": "exclude",
-            "countries": ["IT", "CN"], 
-            "description": "All countries except IT and CN"
-        },
-        
-        "MONDO MENO CN-HK-JP-MO": {
-            "type": "exclude",
-            "countries": ["CN", "HK", "JP", "MO"],
-            "description": "All countries except CN, HK, JP, MO"
-        },
-        
-        "MONDO MENO BR-CN-HK-JP-MO": {
-            "type": "exclude",
-            "countries": ["BR", "CN", "HK", "JP", "MO"],
-            "description": "All countries except BR, CN, HK, JP, MO"
-        },
-        
-        "MONDO MENO BR-CO": {
-            "type": "exclude",
-            "countries": ["BR", "CO"], 
-            "description": "All countries except BR and CO"
-        },
-        
-        "MONDO MENO ITA TRAD": {
-            "type": "exclude",
-            "countries": ["IT"],
-            "description": "World less italian traditional shops (yes ecommerce)"
-        },
-        
-        "MONDO MENO DEPT JP": {
-            "type": "include",
-            "countries": "ALL",
-            "description": "All countries (items not in 4 Japan department stores but available in other JP shops + online)"
-        },
-        
-        # === INTUOMO RULES ===
-        "INTUOMO": {
-            "type": "exclude",
-            "countries": ["FL"], 
-            "description": "All countries, except Florida"
-        },
-        
-        "ALCUNI PV INTUOMO": {
-            "type": "include",
-            "countries": "ALL",
-            "description": "All countries"
-        },
-        
-        "INTUOMO (no e-commerce)": {
-            "type": "include",
-            "countries": [],
-            "description": "Only Intimissimi Uomo shops, no e-commerce"
-        },
-        
-        "INTUOMO - UK": {
-            "type": "exclude",
-            "countries": ["UK"],
-            "description": "All countries excluding UK"
-        },
-        
-        # === FOREIGN WITH ADDITIONS RULES ===
-        "ESTERO + PV ITALIA COPPE MENO CN-HK-JP-MO": {
-            "type": "exclude", 
-            "countries": ["CN", "HK", "JP", "MO"],
-            "description": "All countries, because some shops in IT will have this item"
-        },
-        
-        "ESTERO + PV SOLO DONNA ITALIA": {
-            "type": "include",
-            "countries": "ALL",
-            "description": "All countries, because some shops in IT will have this item"
-        },
-        
-        "ESTERO MENO CN-HK-JP-MO + PV ITALIA COPPE": {
-            "type": "exclude",
-            "countries": ["CN", "HK", "JP", "MO"],
-            "description": "All countries except CN, HK, JP, MO (activate for IT too because some shops have this item)"
-        },
-        
-        "ESTERO MENO CN-HK-JP-MO": {
-            "type": "exclude", 
-            "countries": ["IT", "CN", "HK", "JP", "MO"],
-            "description": "All countries except IT, CN, HK, JP, MO"
-        },
-        
-        "ESTERO MENO AT-CH": {
-            "type": "exclude",
-            "countries": ["IT", "AT", "CH"],
-            "description": "Foreign countries without AT/CH"
-        },
-        
-        "ESTERO+100PV ITA": {
-            "type": "include", 
-            "countries": "ALL",
-            "description": "Foreign countries + IT (unlock for all countries)"
-        },
-        
-        # === COUNTRY-SPECIFIC RULES ===
-        "BR (14 pv) - ES (10 pv) - FR - PT (12 pv) - TR- UK - US": {
-            "type": "include",
-            "countries": ["BR", "ES", "FR", "PT", "TR", "UK", "US"],
-            "description": "Unlock for BR, ES, FR, PT, TR, UK, US"
-        },
-        
-        "AT+AZ+FR+MT+RO+TR+UK+USA+SELEZIONE PV ITALIA": {
-            "type": "include",
-            "countries": ["AT", "AZ", "FR", "MT", "RO", "TR", "UK", "US", "IT"],
-            "description": "Unlock for AT+AZ+FR+MT+RO+TR+UK+USA and IT (selezione pv Italia)"
-        },
-        
-        "IT-AL-AT-CH Ticino-CZ-HR-RO-RS-SI-SK": {
-            "type": "include", 
-            "countries": ["IT", "AL", "AT", "CH", "CZ", "HR", "RO", "RS", "SI", "SK"],
-            "description": "Sold in IT, AL, AT, CH, CZ, HR, RO, RS, SI, SK"
-        },
-        
-        "IT+ RO+ SI+JP+ ECOMM.DE-CZ-PL+ECOMM. USA": {
-            "type": "include",
-            "countries": ["IT", "RO", "SI", "JP", "DE", "CZ", "PL", "US"],
-            "description": "Shop and ecomm in IT-RO-SI-JP, only ecomm in DE-CZ-PL-US"
-        },
-        
-        # === RULES WITH SPECIAL CONDITIONS ===
-        "MONDO - TG 1 SOLO CN-HK-JP-MO": {
-            "type": "include",
-            "countries": "ALL", 
-            "description": "All countries, but size 1 only for CN-HK-JP-MO",
-            "conditions": {"size_restrictions": {"size_1": ["CN", "HK", "JP", "MO"]}}
-        },
-        
-        "MONDO (TG XS ESTERO)": {
-            "type": "include",
-            "countries": "ALL",
-            "description": "All countries; XS is for all except IT",
-            "conditions": {"size_restrictions": {"XS": "ESTERO"}}
-        },
-        
-        "MONDO - TG 5-6 NO CN-HK-JP-MO": {
-            "type": "include", 
-            "countries": "ALL",
-            "description": "All countries; size 5 and 6 IS NOT for CN, HK, JP, MO",
-            "conditions": {"size_restrictions": {"size_5_6_excluded": ["CN", "HK", "JP", "MO"]}}
-        },
-        
-        "MONDO (tg XS CN-HK-JP-MO)": {
-            "type": "include",
-            "countries": "ALL", 
-            "description": "All countries; size XS is only for CN, HK, JP, MO",
-            "conditions": {"size_restrictions": {"XS_only": ["CN", "HK", "JP", "MO"]}}
-        },
-        
-        "MONDO - NO XK - 1C SOLO CN-HK-JP-MO": {
-            "type": "exclude",
-            "countries": ["XK"],
-            "description": "All countries, not for Kosovo; 1c is only for CN, HK, JP, MO",
-            "conditions": {"size_restrictions": {"1c_only": ["CN", "HK", "JP", "MO"]}}
-        },
-        
-        "MONDO MENO BR-CO (CN-HK-JP-MO NO 4B)": {
-            "type": "exclude", 
-            "countries": ["BR", "CO"],
-            "description": "All countries, except BR and CO; CN, HK, JP, MO don't have size 4B",
-            "conditions": {"size_restrictions": {"4B_excluded": ["CN", "HK", "JP", "MO"]}}
-        },
-        
-        "MONDO (CN-HK-JP-MO NO 4)": {
-            "type": "include",
-            "countries": "ALL",
-            "description": "All countries, size 4 not for CN, HK, JP, MO",
-            "conditions": {"size_restrictions": {"size_4_excluded": ["CN", "HK", "JP", "MO"]}}
-        },
-        
-        "MONDO - COPPE D SOLO ESTERO": {
-            "type": "include",
-            "countries": "ALL", 
-            "description": "Activate for all countries, cup D is only for Estero (all not IT)",
-            "conditions": {"size_restrictions": {"cup_D": "ESTERO"}}
-        },
-        
-        "MONDO - TG 1 ESTERO eccetto BR": {
-            "type": "include",
-            "countries": "ALL",
-            "description": "Unlock for all countries but unlock size 1 only for foreign countries without BR", 
-            "conditions": {"size_restrictions": {"size_1_estero_no_BR": True}}
-        },
-        
-        "MONDO MENO ITA TRAD.; tg XXL INTU+EC": {
-            "type": "include", 
-            "countries": "ALL",
-            "description": "Unlock for all countries",
-            "conditions": {"size_restrictions": {"XXL_intuomo_ecomm": True}}
-        },
-        
-        # === COMPLEX RULES WITH SIZES ===
-        "MONDO - TG 0C E 0D SOLO ESTERO E PV SOLO DONNA ITALIA - 1C SOLO ESTERO (0C-CD-1C NO BR)": {
-            "type": "include",
-            "countries": "ALL",
-            "description": "Activate for all countries. 0C and 0D are for Estero and some shops in IT. 1C is just for Estero. 0C, 0D and 1C not for BR",
-            "conditions": {
-                "size_restrictions": {
-                    "0C_0D": "ESTERO_AND_IT_DONNA_SHOPS",
-                    "1C": "ESTERO_ONLY", 
-                    "0C_0D_1C_excluded": ["BR"]
-                }
-            }
-        },
-        
-        "MONDO MENO BR-CN-HK-JP-MO; tg 0C-0D solo Estero + pv solo Donna Italia; 1C SOLO ESTERO": {
-            "type": "exclude",
-            "countries": ["BR", "CN", "HK", "JP", "MO"],
-            "description": "Activate for all countries except CN, HK, JP, MO. Sizes 0C and 0D are just for ESTERO and some stores in IT. 1C size is only for ESTERO",
-            "conditions": {
-                "size_restrictions": {
-                    "0C_0D": "ESTERO_AND_IT_DONNA_SHOPS",
-                    "1C": "ESTERO_ONLY"
-                }
-            }
-        },
-        
-        # === TEMPORAL RULES ===
-        "ITALIA (MONDO fino al 17/05)": {
-            "type": "include",
-            "countries": ["IT"],
-            "description": "Item was meant to be active for Mondo till 17.5., and after that it should be active only in Italy",
-            "conditions": {"temporal": "MONDO_UNTIL_17_05_THEN_IT_ONLY"}
-        },
-        
-        "ITALIA (Esaurimento CN-HK-JP)": {
-            "type": "include", 
-            "countries": ["IT", "CN", "HK", "JP"],
-            "description": "Item is available in IT. It's also available in CN, HK, JP but once availability in warehouses is over, they will no longer restock",
-            "conditions": {"temporal": "CN_HK_JP_UNTIL_STOCK_DEPLETION"}
-        },
-        
-        # === SPECIAL RULES ===
-        "MONDO (Italia solo alcuni pv)": {
-            "type": "include",
-            "countries": "ALL",
-            "description": "Activate for all countries because IF SOME STORES will have this item, you need to unlock it for the web"
-        },
-        
-        "MONDO MENO CN - ALCUNI PV RU": {
-            "type": "exclude", 
-            "countries": ["CN"],
-            "description": "All countries, and RU too because SOME SHOPS in RU will have this item. CN - do not activate"
-        },
-        
-        "MONDO MENO CN-HK-JP (sì IBB8)": {
-            "type": "exclude",
-            "countries": ["CN", "HK", "JP"],
-            "description": "All countries except CN, HK, JP. But JP is available in IBB8 shop - UNLOCK FOR JP also",
-            "conditions": {"shop_specific": {"IBB8": ["JP"]}}
-        }
+    # Country aliases for pattern matching
+    COUNTRY_ALIASES = {
+        'OLANDA': 'NL',
+        'GIAPPONE': 'JP',
+        'TAIWAN': 'TW',
+        'FLORIDA': 'FL',
+        'ITALIA': 'IT',
+        'MUNDO': 'MONDO',  # Common typo
     }
     
-    @classmethod
-    def get_allowed_countries(cls, rule_text):
+    def __init__(self):
+        self.all_countries_set = set(self.ALL_COUNTRIES)
+    
+    def process_visibility_rule(self, rule_text: str, product_info: Dict = None) -> Set[str]:
         """
-        Returns the list of allowed countries for a visibility rule
+        Process a visibility rule and return the set of allowed countries
         
         Args:
             rule_text (str): The visibility rule text
+            product_info (Dict): Additional product information (size, cup, etc.)
             
         Returns:
-            list: List of allowed country codes
+            Set[str]: Set of country codes where the product should be available
         """
-        if not rule_text:
-            return []
-        
-        # Clean the rule text
-        rule_clean = rule_text.strip().upper()
-        
-        # Look for an exact match
-        if rule_clean in cls.RULES:
-            rule = cls.RULES[rule_clean]
+        if not rule_text or rule_text.strip() == "":
+            return set()
             
-            if rule["type"] == "include":
-                if rule["countries"] == "ALL":
-                    return cls.ALL_COUNTRIES.copy()
-                else:
-                    return rule["countries"].copy()
-                    
-            elif rule["type"] == "exclude":
-                excluded = rule["countries"]
-                return [country for country in cls.ALL_COUNTRIES if country not in excluded]
+        rule_text = rule_text.strip().upper()
+        logger.info(f"Processing visibility rule: {rule_text}")
         
-        # If no exact match found, try pattern matching
-        return cls._try_pattern_matching(rule_clean)
+        try:
+            # Handle exact matches first
+            exact_countries = self._handle_exact_rules(rule_text)
+            if exact_countries is not None:
+                return exact_countries
+                
+            # Handle complex rules
+            return self._parse_complex_rule(rule_text, product_info)
+            
+        except Exception as e:
+            logger.error(f"Error processing visibility rule '{rule_text}': {e}")
+            return set()
     
-    @classmethod
-    def _try_pattern_matching(cls, rule_text):
-        """
-        Try pattern matching for non-exact rules
-        """
-        rule_lower = rule_text.lower()
+    def _handle_exact_rules(self, rule_text: str) -> Optional[Set[str]]:
+        """Handle exact rule matches"""
         
-        # Common patterns
-        if "mondo" in rule_lower and "meno" not in rule_lower and "except" not in rule_lower:
-            return cls.ALL_COUNTRIES.copy()
-        
-        if "estero" in rule_lower and "meno" not in rule_lower:
-            return [country for country in cls.ALL_COUNTRIES if country != "IT"]
-        
-        # If unable to interpret, return empty list
-        return []
-    
-    @classmethod
-    def get_rule_description(cls, rule_text):
-        """
-        Returns the description of a rule
-        """
-        if not rule_text:
-            return "No rule specified"
-        
-        rule_clean = rule_text.strip().upper()
-        
-        if rule_clean in cls.RULES:
-            return cls.RULES[rule_clean]["description"]
-        
-        return f"Unknown rule: {rule_text}"
-    
-    @classmethod
-    def has_special_conditions(cls, rule_text):
-        """
-        Checks if a rule has special conditions (sizes, shops, etc.)
-        """
-        if not rule_text:
-            return False
-        
-        rule_clean = rule_text.strip().upper()
-        
-        if rule_clean in cls.RULES:
-            return "conditions" in cls.RULES[rule_clean]
-        
-        return False
-    
-    @classmethod
-    def get_special_conditions(cls, rule_text):
-        """
-        Returns the special conditions of a rule
-        """
-        if not rule_text:
-            return {}
-        
-        rule_clean = rule_text.strip().upper()
-        
-        if rule_clean in cls.RULES and "conditions" in cls.RULES[rule_clean]:
-            return cls.RULES[rule_clean]["conditions"]
-        
-        return {}
-    
-    @classmethod
-    def list_all_rules(cls):
-        """
-        Returns all available rules
-        """
-        return list(cls.RULES.keys())
-    
-    @classmethod
-    def get_rule_stats(cls):
-        """
-        Returns statistics about the rules
-        """
-        total_rules = len(cls.RULES)
-        include_rules = len([r for r in cls.RULES.values() if r["type"] == "include"])
-        exclude_rules = len([r for r in cls.RULES.values() if r["type"] == "exclude"])
-        rules_with_conditions = len([r for r in cls.RULES.values() if "conditions" in r])
-        
-        return {
-            "total_rules": total_rules,
-            "include_rules": include_rules, 
-            "exclude_rules": exclude_rules,
-            "rules_with_conditions": rules_with_conditions,
-            "total_countries": len(cls.ALL_COUNTRIES)
+        exact_rules = {
+            "MONDO": self.all_countries_set,
+            "WORLD": self.all_countries_set,
+            "ESTERO": self.all_countries_set - {"IT"},
+            "OLANDA": {"NL"},
+            "ITALIA": {"IT"},
+            "ALCUNI PV INTUOMO": self.all_countries_set,
+            "INTUOMO": self.all_countries_set - {"FL"},
+            "MONDO MENO FL": self.all_countries_set - {"FL"},
+            "ESTERO+100PV ITA": self.all_countries_set,
+            "INTUOMO (NO E-COMMERCE)": set(),  # No e-commerce
         }
+        
+        return exact_rules.get(rule_text)
+    
+    def _parse_complex_rule(self, rule_text: str, product_info: Dict = None) -> Set[str]:
+        """Parse complex visibility rules"""
+        
+        # Start with all countries by default
+        result_countries = self.all_countries_set.copy()
+        
+        # Handle MONDO MENO (World except) patterns
+        if "MONDO MENO" in rule_text or "MONDO-" in rule_text:
+            result_countries = self._handle_mondo_meno(rule_text)
+            
+        # Handle ESTERO patterns
+        elif "ESTERO" in rule_text:
+            result_countries = self._handle_estero_patterns(rule_text)
+            
+        # Handle specific country lists
+        elif self._contains_country_list(rule_text):
+            result_countries = self._extract_country_list(rule_text)
+            
+        # Handle IT+ patterns (specific countries)
+        elif "IT+" in rule_text or any(f"{country}+" in rule_text for country in self.ALL_COUNTRIES):
+            result_countries = self._handle_specific_countries(rule_text)
+            
+        # Apply additional conditions
+        result_countries = self._apply_conditions(rule_text, result_countries, product_info)
+        
+        logger.info(f"Rule '{rule_text}' → {len(result_countries)} countries: {sorted(result_countries)}")
+        return result_countries
+    
+    def _handle_mondo_meno(self, rule_text: str) -> Set[str]:
+        """Handle 'MONDO MENO' (World except) patterns"""
+        
+        # Extract excluded countries
+        excluded = set()
+        
+        # Pattern: MONDO-CN or MONDO MENO CN
+        patterns = [
+            r"MONDO[-\s]?MENO[\s]+([\w\-\s]+)",
+            r"MONDO-([\w\-]+)",
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, rule_text)
+            if match:
+                excluded_text = match.group(1)
+                excluded.update(self._parse_country_codes(excluded_text))
+                break
+        
+        # Special cases
+        if "CN-HK-JP-MO" in rule_text:
+            excluded.update({"CN", "HK", "JP", "MO"})
+        if "ES-DE-UK-FR-HK-OLANDA-GIAPPONE-TAIWAN-USA" in rule_text:
+            excluded.update({"ES", "DE", "UK", "FR", "HK", "NL", "JP", "TW", "US"})
+        if "ITALIA-CN-HK-JP-MO" in rule_text:
+            excluded.update({"IT", "CN", "HK", "JP", "MO"})
+        if "BR-CO" in rule_text:
+            excluded.update({"BR", "CO"})
+        if "AT-CH" in rule_text:
+            excluded.update({"AT", "CH"})
+        
+        return self.all_countries_set - excluded
+    
+    def _handle_estero_patterns(self, rule_text: str) -> Set[str]:
+        """Handle ESTERO (Foreign) patterns"""
+        
+        # Start with all countries except IT
+        result = self.all_countries_set - {"IT"}
+        
+        # Check for additional exclusions
+        if "MENO CN-HK-JP-MO" in rule_text:
+            result -= {"CN", "HK", "JP", "MO"}
+        elif "MENO AT-CH" in rule_text:
+            result -= {"AT", "CH"}
+        
+        # Check for IT inclusion due to some shops
+        if any(phrase in rule_text for phrase in [
+            "PV ITALIA", "SOLO DONNA ITALIA", "VIP ITALIA", 
+            "SELEZIONE PV ITALIA", "100PV ITA"
+        ]):
+            result.add("IT")
+        
+        return result
+    
+    def _handle_specific_countries(self, rule_text: str) -> Set[str]:
+        """Handle specific country patterns like IT+RO+SI+JP"""
+        
+        # Extract countries from patterns like "IT+RO+SI+JP"
+        countries = set()
+        
+        # Pattern: COUNTRY+ or COUNTRY-
+        country_pattern = r"\b([A-Z]{2,3})\+?"
+        matches = re.findall(country_pattern, rule_text)
+        
+        for match in matches:
+            if match in self.ALL_COUNTRIES:
+                countries.add(match)
+        
+        # Handle specific known patterns
+        if "BR (14 pv) - ES (10 pv) - FR - PT (12 pv) - TR- UK - US" in rule_text:
+            countries.update({"BR", "ES", "FR", "PT", "TR", "UK", "US"})
+        
+        return countries
+    
+    def _contains_country_list(self, rule_text: str) -> bool:
+        """Check if rule contains a specific country list"""
+        
+        # Look for patterns that indicate specific country lists
+        patterns = [
+            r"\b[A-Z]{2,3}[\s\-\+]+[A-Z]{2,3}",  # Country codes with separators
+            r"\([^)]*pv[^)]*\)",  # Patterns with "pv" in parentheses
+        ]
+        
+        return any(re.search(pattern, rule_text) for pattern in patterns)
+    
+    def _extract_country_list(self, rule_text: str) -> Set[str]:
+        """Extract specific country list from rule text"""
+        
+        countries = set()
+        
+        # Extract all potential country codes
+        potential_codes = re.findall(r"\b([A-Z]{2,3})\b", rule_text)
+        
+        for code in potential_codes:
+            if code in self.ALL_COUNTRIES:
+                countries.add(code)
+            elif code in self.COUNTRY_ALIASES:
+                countries.add(self.COUNTRY_ALIASES[code])
+        
+        return countries
+    
+    def _apply_conditions(self, rule_text: str, countries: Set[str], product_info: Dict = None) -> Set[str]:
+        """Apply conditional logic based on product info"""
+        
+        # Handle size-specific conditions
+        if product_info and "taglia" in product_info:
+            size = product_info["taglia"]
+            
+            # Size 1 specific rules
+            if "TG 1" in rule_text and "SOLO CN-HK-JP-MO" in rule_text:
+                if size == "1":
+                    return {"CN", "HK", "JP", "MO"}
+                else:
+                    return countries - {"CN", "HK", "JP", "MO"}
+            
+            # XS specific rules  
+            if "TG XS" in rule_text:
+                if size == "XS":
+                    if "ESTERO" in rule_text:
+                        return countries - {"IT"}
+                    elif "CN-HK-JP-MO" in rule_text:
+                        return {"CN", "HK", "JP", "MO"}
+        
+        # Handle cup-specific conditions
+        if product_info and any(key in product_info for key in ["coppa", "cup"]):
+            if "COPPE D SOLO ESTERO" in rule_text:
+                cup = product_info.get("coppa", product_info.get("cup", ""))
+                if cup == "D":
+                    return countries - {"IT"}
+        
+        # Handle no e-commerce rules
+        if "NO E-COMMERCE" in rule_text:
+            return set()
+        
+        return countries
+    
+    def _parse_country_codes(self, text: str) -> Set[str]:
+        """Parse country codes from text"""
+        
+        countries = set()
+        
+        # Replace aliases
+        for alias, code in self.COUNTRY_ALIASES.items():
+            text = text.replace(alias, code)
+        
+        # Extract country codes
+        codes = re.findall(r"\b([A-Z]{2,3})\b", text.upper())
+        
+        for code in codes:
+            if code in self.ALL_COUNTRIES:
+                countries.add(code)
+        
+        return countries
+    
+    def get_visibility_statistics(self, rules_data: List[str]) -> Dict:
+        """Get statistics about visibility rules usage"""
+        
+        stats = {
+            "total_rules": len(rules_data),
+            "unique_rules": len(set(rules_data)),
+            "rule_frequency": {},
+            "country_coverage": {country: 0 for country in self.ALL_COUNTRIES}
+        }
+        
+        for rule in rules_data:
+            if rule:
+                rule = rule.strip()
+                stats["rule_frequency"][rule] = stats["rule_frequency"].get(rule, 0) + 1
+                
+                # Calculate country coverage
+                countries = self.process_visibility_rule(rule)
+                for country in countries:
+                    stats["country_coverage"][country] += 1
+        
+        return stats
 
 
-# === UTILITY FUNCTIONS ===
-
-def parse_visibility_rule(rule_text):
+def apply_visibility_rules_to_products(products_df, processor: EcommerceVisibilityProcessor = None):
     """
-    Utility function to parse a visibility rule
+    Apply visibility rules to products DataFrame and update country availability
     
     Args:
-        rule_text (str): Rule text
+        products_df: DataFrame with products and ecommerce_visibility column
+        processor: EcommerceVisibilityProcessor instance
         
     Returns:
-        dict: Dictionary with allowed countries and description
+        DataFrame with updated country columns based on visibility rules
     """
-    allowed_countries = VisibilityRules.get_allowed_countries(rule_text)
-    description = VisibilityRules.get_rule_description(rule_text)
-    has_conditions = VisibilityRules.has_special_conditions(rule_text)
-    conditions = VisibilityRules.get_special_conditions(rule_text)
     
-    return {
-        "rule_text": rule_text,
-        "allowed_countries": allowed_countries,
-        "description": description, 
-        "has_special_conditions": has_conditions,
-        "special_conditions": conditions,
-        "allowed_countries_count": len(allowed_countries)
-    }
-
-
-def test_visibility_rules():
-    """
-    Test function to verify the rules
-    """
-    print("=== TEST VISIBILITY RULES ===")
+    if processor is None:
+        processor = EcommerceVisibilityProcessor()
     
-    # Test some rules
-    test_rules = [
-        "MONDO",
-        "ESTERO", 
-        "MONDO-CN-HK-JP-MO",
-        "OLANDA",
-        "MONDO MENO BR-CN-HK-JP-MO"
+    logger.info(f"🔄 Applying visibility rules to {len(products_df)} products")
+    
+    # Find the correct E-commerce Visibility column name
+    visibility_col = None
+    possible_names = [
+        'E-COMMERCE VISIBILITY (COUNTRIES)',
+        'E-commerce Visibility',
+        'ecommerce_visibility',
+        'E-COMMERCE VISIBILITY',
+        'ECOMMERCE VISIBILITY'
     ]
     
-    for rule in test_rules:
-        result = parse_visibility_rule(rule)
-        print(f"\nRule: {rule}")
-        print(f"Description: {result['description']}")
-        print(f"Allowed countries ({result['allowed_countries_count']}): {result['allowed_countries'][:10]}...")
-        if result['has_special_conditions']:
-            print(f"Special conditions: {result['special_conditions']}")
+    for col_name in possible_names:
+        if col_name in products_df.columns:
+            visibility_col = col_name
+            break
     
-    # Statistics
-    stats = VisibilityRules.get_rule_stats()
-    print("\n=== STATS ===")
-    for key, value in stats.items():
-        print(f"{key}: {value}")
+    if not visibility_col:
+        logger.warning("⚠️ No E-commerce Visibility column found. Available columns: " + 
+                      ", ".join(products_df.columns.tolist()))
+        return products_df
+    
+    logger.info(f"📋 Using visibility column: '{visibility_col}'")
+    
+    # Track statistics
+    products_with_rules = 0
+    countries_populated = 0
+    
+    # Process each product
+    for idx, row in products_df.iterrows():
+        visibility_rule = row.get(visibility_col, '')
+        
+        if visibility_rule and str(visibility_rule).strip() and str(visibility_rule).strip() != 'nan':
+            products_with_rules += 1
+            
+            # Get allowed countries based on visibility rule
+            allowed_countries = processor.process_visibility_rule(
+                str(visibility_rule).strip(), 
+                {
+                    'taglia': row.get('Taglia', ''),
+                    'coppa': row.get('Coppa', ''),  # If you have cup info
+                }
+            )
+            
+            logger.debug(f"Product {idx}: Rule '{visibility_rule}' → {len(allowed_countries)} countries")
+            
+            # Update country columns based on visibility rules
+            for country in processor.ALL_COUNTRIES:
+                country_col = f'country_{country}'
+                if country_col in products_df.columns:
+                    current_value = products_df.at[idx, country_col]
+                    
+                    if country in allowed_countries:
+                        # Keep existing value or set AAP if empty
+                        if pd.isna(current_value) or str(current_value).strip() == '' or str(current_value).strip() == 'nan':
+                            products_df.at[idx, country_col] = 'AAP'
+                            countries_populated += 1
+                    else:
+                        # Clear country if not allowed by visibility rules
+                        if not pd.isna(current_value) and str(current_value).strip() != '':
+                            products_df.at[idx, country_col] = ''
+    
+    logger.info(f"✅ Visibility rules applied successfully:")
+    logger.info(f"   📊 Products with rules: {products_with_rules}/{len(products_df)}")
+    logger.info(f"   🌍 Countries populated: {countries_populated}")
+    
+    return products_df
 
 
-if __name__ == "__main__":
-    test_visibility_rules()
+# Integration function for Django
+def integrate_visibility_processor():
+    """
+    Integration function to add visibility processing to Django country processor
+    """
+    
+    from .django_country_processor import DjangoCountryProcessor
+    
+    # Add visibility processing method to existing processor
+    def process_with_visibility(self, df, import_record):
+        """Enhanced processing with visibility rules"""
+        
+        # Apply visibility rules before saving to database
+        processor = EcommerceVisibilityProcessor()
+        df_with_visibility = apply_visibility_rules_to_products(df, processor)
+        
+        # Continue with normal database saving
+        return self._save_to_database(df_with_visibility, import_record)
+    
+    # Monkey patch the method
+    DjangoCountryProcessor.process_with_visibility = process_with_visibility

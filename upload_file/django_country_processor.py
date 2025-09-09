@@ -61,13 +61,20 @@ class DjangoCountryProcessor:
             # Step 2: Create country columns
             df_with_countries = create_country_columns(df)
 
-            # Step 3: Save to Django database
-            stats = self._save_to_database(df_with_countries, import_record)
+            # Step 2.5: Apply E-commerce Visibility rules (NEW!)
+            df_with_visibility = self._apply_visibility_rules(df_with_countries)
 
-            # Step 4: Update import record
+            # Step 3: Save CSV locally (optional)
+            csv_path = self._save_processed_csv(df_with_visibility, import_record)
+
+            # Step 4: Save to Django database
+            stats = self._save_to_database(df_with_visibility, import_record)
+
+            # Step 5: Update import record with CSV path
             import_record.status = "processed"
             import_record.total_products = stats["products_created"]
             import_record.total_countries = len(self.all_countries)
+            import_record.csv_file_path = csv_path  # Save CSV path for reference
             import_record.save()
 
             logger.info(f"Processing completed for import {import_record.id}")
@@ -109,38 +116,67 @@ class DjangoCountryProcessor:
             if df.empty:
                 raise ValueError("Input DataFrame for database saving is empty.")
 
-            # Definizione del mapping dei campi
+            # Definizione del mapping dei campi CORRETTA
             field_mapping = {
                 "chiave_articolo": [
+                    "chiave articolo colore x Uff. PIANIF",
                     "Chiave Articolo",
                     "chiave_articolo",
-                    "chiave articolo",
                 ],
-                "concatena_magazzino": ["Concatena Magazzino", "concatena_magazzino"],
+                "concatena_magazzino": [
+                    "concatena 1 per MAGAZZINO",
+                    "Concatena Magazzino",
+                    "concatena_magazzino"
+                ],
                 "serie": ["Serie", "serie"],
                 "merceologia": ["Merceologia", "merceologia"],
                 "n_tranche": ["N. Tranche", "n_tranche", "tranche"],
-                "stagione": ["Stagione", "stagione"],
+                "stagione": ["Stag.", "Stagione", "stagione"],  # CORRETTO!
                 "sku": ["SKU", "sku"],
                 "articolo": ["Articolo", "articolo"],
                 "colore": ["Colore", "colore"],
                 "taglia": ["Taglia", "taglia"],
-                "descrizione": ["Descrizione", "descrizione"],
+                "descrizione": [
+                    "Descrizione articolo",  # CORRETTO!
+                    "Descrizione",
+                    "descrizione"
+                ],
                 "data_inizio_consegna": [
+                    "DATA INIZIO CONSEGNA AI P.V. (ORIGINARIA)",  # CORRETTO!
                     "Data Inizio Consegna",
                     "data_inizio_consegna",
                 ],
                 "data_spedizione_reale": [
+                    "DATA SPEDIZIONE REALE STANDARD (PIM)",  # CORRETTO!
                     "Data Spedizione Reale",
                     "data_spedizione_reale",
                 ],
                 "data_consegna_fornitore": [
+                    "DATA CONSEGNA FORNITORE PRIMO 60%",  # CORRETTO!
                     "Data Consegna Fornitore",
                     "data_consegna_fornitore",
                 ],
-                "fornitore": ["Fornitore", "fornitore"],
-                "codice_forn": ["Codice Forn", "codice_forn"],
-                "made_in": ["Made In", "made_in"],
+                "impianti_per": [
+                    "IMPIANTI PER",  # CORRETTO!
+                    "Impianti Per",
+                    "impianti_per"
+                ],
+                "note_ufficio": [
+                    "NOTE UFFICIO COMMERCIALE",  # CORRETTO!
+                    "Note Ufficio",
+                    "note_ufficio"
+                ],
+                "categorie": ["CATEGORIE", "Categorie", "categorie"],  # CORRETTO!
+                "fornitore": ["FORNITORE", "Fornitore", "fornitore"],
+                "codice_forn": ["CODICE FORN", "Codice Forn", "codice_forn"],
+                "made_in": ["MADE IN", "Made In", "made_in"],
+                "ecommerce_visibility": [
+                    "E-COMMERCE VISIBILITY (COUNTRIES)",
+                    "E-commerce Visibility",
+                    "ecommerce_visibility",
+                    "E-COMMERCE VISIBILITY",
+                    "ECOMMERCE VISIBILITY"
+                ],
             }
 
             # Crea un DataFrame per i dati dei prodotti
@@ -444,3 +480,72 @@ class DjangoCountryProcessor:
         except Exception as e:
             logger.error(f"Error calculating statistics: {e}", exc_info=True)
             return {}
+
+    def _save_processed_csv(
+        self, df: pd.DataFrame, import_record: PianificazioneImport
+    ) -> str:
+        """
+        Salva il DataFrame processato come CSV in locale
+
+        Args:
+            df (pd.DataFrame): DataFrame con i dati processati
+            import_record (PianificazioneImport): Record di import
+
+        Returns:
+            str: Path del file CSV salvato
+        """
+        try:
+            # Crea il nome del file con timestamp
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            base_name = import_record.source_file_name.replace('.xlsx', '').replace('.xls', '')
+            csv_filename = f"{base_name}_processed_{timestamp}.csv"
+
+            # Path nella cartella media/temp_uploads
+            csv_path = os.path.join(settings.MEDIA_ROOT, "temp_uploads", csv_filename)
+
+            # Assicurati che la directory esista
+            os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+
+            # Salva il CSV
+            df.to_csv(csv_path, index=False, encoding='utf-8-sig', sep=',')
+
+            logger.info(f"✅ CSV processato salvato: {csv_path}")
+            logger.info(f"📊 Dati salvati: {len(df)} righe, {len(df.columns)} colonne")
+
+            # Ritorna il path relativo per salvarlo nel database
+            relative_path = os.path.relpath(csv_path, settings.MEDIA_ROOT)
+            return relative_path
+
+        except Exception as e:
+            logger.error(f"❌ Errore nel salvataggio CSV: {str(e)}")
+            return ""
+
+    def _apply_visibility_rules(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Applica le regole E-commerce Visibility per popolare automaticamente i paesi
+        
+        Args:
+            df (pd.DataFrame): DataFrame con i dati processati
+            
+        Returns:
+            pd.DataFrame: DataFrame con paesi popolati secondo le regole di visibilità
+        """
+        try:
+            from .visibility_rules import EcommerceVisibilityProcessor, apply_visibility_rules_to_products
+            
+            logger.info("🔄 Applying E-commerce Visibility rules to products...")
+            
+            # Crea il processore delle regole
+            processor = EcommerceVisibilityProcessor()
+            
+            # Applica le regole al DataFrame
+            df_with_rules = apply_visibility_rules_to_products(df, processor)
+            
+            logger.info("✅ E-commerce Visibility rules applied successfully")
+            return df_with_rules
+            
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to apply visibility rules: {str(e)}")
+            logger.warning("Continuing without visibility rules application...")
+            return df

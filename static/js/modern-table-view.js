@@ -59,6 +59,8 @@ class ModernTableView {
         
         // Bulk operations
         $('#apply-bulk-changes').on('click', this.applyBulkChanges.bind(this));
+        $('#apply-visibility-rules').on('click', this.applyVisibilityRules.bind(this));
+        $('#auto-apply-rule').on('click', this.applyVisibilityRules.bind(this));
     }
     
     setupAutosave() {
@@ -484,7 +486,20 @@ class ModernTableView {
             url: `/api/products/${productId}/`,
             method: 'GET',
             success: (response) => {
-                this.renderCountryGrid(response.product.countries || []);
+                const product = response.product;
+                
+                // Update product info in the modal
+                $('#product-sku').text(product.sku || productId);
+                $('#product-visibility-rule').text(product.ecommerce_visibility || 'No rule set');
+                
+                // Show product info if there's a visibility rule
+                if (product.ecommerce_visibility) {
+                    $('#product-info-alert').show();
+                } else {
+                    $('#product-info-alert').hide();
+                }
+                
+                this.renderCountryGrid(product.countries || []);
             },
             error: (xhr, status, error) => {
                 this.showError('Failed to load country data: ' + error);
@@ -713,6 +728,66 @@ class ModernTableView {
         });
     }
     
+    applyVisibilityRules() {
+        console.log('🚀 applyVisibilityRules called');
+        const productId = $('#country-modal').data('product-id');
+        console.log('📦 Product ID:', productId);
+        
+        if (!productId) {
+            console.error('❌ No product ID found');
+            this.showError('No product selected');
+            return;
+        }
+        
+        // Show loading state
+        const $button = $('#apply-visibility-rules, #auto-apply-rule');
+        const originalText = $button.first().html();
+        console.log('🔄 Setting loading state...');
+        $button.html('<i class="bi bi-hourglass-split"></i> Applying...').prop('disabled', true);
+        
+        // Get CSRF token
+        const csrfToken = $('[name=csrfmiddlewaretoken]').val();
+        console.log('🔐 CSRF Token:', csrfToken ? 'Found' : 'Missing!');
+        
+        const url = `/api/products/${productId}/apply-visibility-rules/`;
+        console.log('🌐 API URL:', url);
+        
+        // Apply visibility rules via API
+        $.ajax({
+            url: url,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            success: (response) => {
+                console.log('✅ Success response:', response);
+                this.showSuccess(response.message);
+                
+                // Reload the country data to show updated countries
+                this.loadCountryData(productId);
+                
+                // Show applied rule info
+                if (response.rule_applied) {
+                    $('#product-visibility-rule').text(response.rule_applied);
+                    $('#product-info-alert').show();
+                }
+            },
+            error: (xhr, status, error) => {
+                console.error('❌ Error response:', xhr.responseJSON);
+                console.error('❌ Status:', status);
+                console.error('❌ Error:', error);
+                const errorMsg = xhr.responseJSON?.message || error;
+                this.showError('Failed to apply visibility rules: ' + errorMsg);
+            },
+            complete: () => {
+                console.log('🏁 Request completed');
+                // Restore button state
+                $button.html(originalText).prop('disabled', false);
+            }
+        });
+    }
+    
     // Bulk Operations
     showBulkOperationsButton() {
         if (!$('#bulk-operations-btn').length) {
@@ -824,5 +899,13 @@ class ModernTableView {
 
 // Initialize when document is ready
 $(document).ready(function() {
+    console.log('🚀 Initializing ModernTableView...');
     window.modernTableView = new ModernTableView();
+    console.log('✅ ModernTableView initialized successfully');
 });
+
+// Fallback check if jQuery is not loaded
+if (typeof $ === 'undefined') {
+    console.error('❌ jQuery is not loaded! Please include jQuery before this script.');
+    alert('Error: jQuery is required for this page to function properly.');
+}
