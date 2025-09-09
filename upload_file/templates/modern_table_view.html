@@ -40,6 +40,7 @@
 
 .table-wrapper {
     overflow-x: auto;
+    position: relative; /* Needed for resizing handles */
 }
 
 .table > thead.sticky-top {
@@ -212,6 +213,28 @@
 .table-wrapper::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* Column Resizing */
+.table th {
+    position: relative;
+}
+
+.resize-handle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 5px;
+    cursor: col-resize;
+    z-index: 1; /* Ensure it's on top */
+}
+
+.resize-handle:hover,
+.resizing {
+    background-color: #007bff;
+    opacity: 0.5;
+}
+
 </style>
 <div class="modern-table-view bg-light">
     <div class="header-bar sticky-top bg-white border-bottom shadow-sm py-2">
@@ -236,9 +259,11 @@
                         </button>
                     </div>
                     <div class="btn-group btn-group-sm">
-                        <a href="{% url 'download_xml' pianificazione.id %}" class="btn btn-primary btn-sm">
-                            <i class="bi bi-download"></i> Download XML
-                        </a>
+                        <button id="download-xml-btn" class="btn btn-primary btn-sm">
+                            <span class="spinner-border spinner-border-sm" role="status" style="display: none;"></span>
+                            <i class="bi bi-download"></i>
+                            <span class="button-text">Download XML</span>
+                        </button>
                         <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-cloud-upload"></i> New Upload</a>
                     </div>
                 </div>
@@ -246,7 +271,7 @@
         </div>
     </div>
 
-    <div class="filter-bar sticky-top bg-white border-bottom py-2">
+    {% comment %}<!-- <div class="filter-bar sticky-top bg-white border-bottom py-2">
         <div class="container-fluid">
             <div class="d-flex justify-content-between align-items-center">
                 <div class="status-filters">
@@ -269,7 +294,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->{% endcomment %}
 
     <div class="table-container py-3">
         <div class="container-fluid">
@@ -281,10 +306,10 @@
             </div>
             
             <div class="table-wrapper overflow-x-auto bg-white rounded-3 shadow-sm">
-                <table class="table table-hover table-sm m-0" id="products-table">
+                <table class="table table-hover table-sm m-0" id="products-table" style="table-layout: fixed;">
                     <thead class="table-dark sticky-top">
                         <tr>
-                            <th width="30">
+                            <th>
                                 <input type="checkbox" id="select-all-checkbox" class="form-check-input">
                             </th>
                             <th width="140">Chiave Articolo</th>
@@ -331,7 +356,7 @@
                 <div class="col-12">
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="pagination-info">
-                            <span id="pagination-text">Showing 1-{{ prodotti|length }} of {{ total_products }} products</span>
+                            <span id="pagination-text">Showing {{ prodotti.start_index }}-{{ prodotti.end_index }} of {{ total_products }} products</span>
                         </div>
 
                         <div class="pagination-controls d-flex align-items-center gap-3">
@@ -423,8 +448,7 @@
                 <div class="mb-3">
                     <label class="form-label">Made In</label>
                     <input type="text" class="form-control" id="bulk-made-in" placeholder="Leave empty to skip">
-                </div>
-                
+
                 <div class="mb-3">
                     <label class="form-label">Series</label>
                     <input type="text" class="form-control" id="bulk-series" placeholder="Leave empty to skip">
@@ -437,5 +461,81 @@
         </div>
     </div>
 </div>
+<iframe id="download-iframe" style="display:none;"></iframe>
+<script src="{% static 'js/column-resizer.js' %}"></script>
 <script src="{% static 'js/modern-table-view.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const downloadBtn = document.getElementById('download-xml-btn');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function deleteCookie(name) {
+        // Set the cookie to a past date to expire it.
+        // The path is set to '/' to ensure it's deleted for the whole site.
+        document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    }
+
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function() {
+            const spinner = this.querySelector('.spinner-border');
+            const icon = this.querySelector('.bi-download');
+            const buttonText = this.querySelector('.button-text');
+            
+            spinner.style.display = 'inline-block';
+            icon.style.display = 'none';
+            buttonText.textContent = ' Preparing...';
+            this.disabled = true;
+
+            const downloadIframe = document.getElementById('download-iframe');
+            if (downloadIframe) {
+                // Clear any previous content in the iframe to ensure a fresh download
+                downloadIframe.src = 'about:blank'; 
+                // Set a small timeout to ensure the iframe is ready for the new src
+                setTimeout(() => {
+                    downloadIframe.src = "{% url 'download_xml' pianificazione.id %}";
+                }, 50); // Small delay to ensure iframe is ready
+            }
+
+            // Poll for the 'download_ready' cookie
+            let pollCount = 0;
+            const maxPolls = 60; // 30 seconds timeout (60 * 500ms)
+
+            const interval = setInterval(() => {
+                pollCount++;
+                if (getCookie('download_ready') === 'true' || pollCount > maxPolls) {
+                    clearInterval(interval);
+
+                    // Delete the cookie to ensure the next click works correctly
+                    deleteCookie('download_ready');
+
+                    // Reset the button state
+                    spinner.style.display = 'none';
+                    icon.style.display = 'inline-block';
+                    buttonText.textContent = ' Download XML';
+                    downloadBtn.disabled = false;
+
+                    if (pollCount > maxPolls) {
+                        console.error("Download readiness check timed out.");
+                        // Optionally show an error to the user
+                    }
+                }
+            }, 500); // Check every 500ms
+        });
+    }
+});
+</script>
 {% endblock %}

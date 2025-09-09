@@ -186,6 +186,7 @@ class ModernTableView {
                 }
                 
                 this.updateSelectionState();
+                this.updatePaginationNav(response.pagination);
             },
             error: (xhr, status, error) => {
                 $loadingIndicator.hide();
@@ -197,7 +198,54 @@ class ModernTableView {
     
     updatePaginationInfo(pagination = null) {
         if (pagination) {
-            $('#pagination-text').text(`Showing ${pagination.start}-${pagination.end} of ${pagination.total} products`);
+            if (pagination.total > 0) {
+                $('#pagination-text').text(`Showing ${pagination.start}-${pagination.end} of ${pagination.total} products`);
+            } else {
+                $('#pagination-text').text('No products found');
+            }
+        }
+    }
+
+    updatePaginationNav(pagination) {
+        const $nav = $('#pagination-nav');
+        if (!$nav.length || !pagination) return;
+
+        let html = '';
+
+        if (pagination.has_previous) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="1"><i class="bi bi-chevron-double-left"></i></a></li>`;
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.previous_page_number}"><i class="bi bi-chevron-left"></i></a></li>`;
+        }
+
+        // Simplified pagination links logic for demonstration
+        const startPage = Math.max(1, pagination.current_page - 2);
+        const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+
+        if (startPage > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+            if (startPage > 2) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            if (i === pagination.current_page) {
+                html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                html += `<li class="page-item"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+            }
+        }
+
+        if (endPage < pagination.total_pages) {
+            if (endPage < pagination.total_pages - 1) {
+                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+            }
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.total_pages}">${pagination.total_pages}</a></li>`;
+        }
+
+        if (pagination.has_next) {
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.next_page_number}"><i class="bi bi-chevron-right"></i></a></li>`;
+            html += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.total_pages}"><i class="bi bi-chevron-double-right"></i></a></li>`;
         }
     }
     

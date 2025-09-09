@@ -87,10 +87,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "tranceautom.wsgi.application"
 
-SOCIAL_AUTH_REQUIRE_POST = True
-
-SOCIAL_AUTH_URL_NAMESPACE = "social"
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 # This setup uses django-environ to configure the database.
@@ -129,30 +125,35 @@ SOCIAL_AUTH_OKTA_OAUTH2_KEY = env("OKTA_CLIENT_ID")
 SOCIAL_AUTH_OKTA_OAUTH2_SECRET = env("OKTA_CLIENT_SECRET")
 # The issuer URL often needs the authorization server path.
 # Verify this path in your Okta admin console under API > Authorization Servers. + "/oauth2/default"
-SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER")
-
-# Optional: User creation settings
-SOCIAL_AUTH_USER_MODEL = "auth.User"
-SOCIAL_AUTH_CREATE_USERS = True
-SOCIAL_AUTH_UPDATE_LAST_LOGIN = True
-
-# Pipeline for user creation/updating
-SOCIAL_AUTH_PIPELINE = (
-    "social_core.pipeline.social_auth.social_details",
-    "social_core.pipeline.social_auth.social_uid",
-    "social_core.pipeline.social_auth.auth_allowed",
-    "social_core.pipeline.social_auth.social_user",
-    "social_core.pipeline.user.get_username",
-    "social_core.pipeline.user.create_user",
-    "social_core.pipeline.social_auth.associate_user",
-    "social_core.pipeline.social_auth.load_extra_data",
-    "social_core.pipeline.user.user_details",
-)
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER")  # env("OKTA_ISSUER")
+SOCIAL_AUTH_REQUIRE_POST = False
+SOCIAL_AUTH_URL_NAMESPACE = "social"
+SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ["openid", "profile", "email"]
 
 # Redirect URLs
+SOCIAL_AUTH_REDIRECT_URI = "http://localhost:8000/auth/complete/okta-oauth2/"
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = "/"
 SOCIAL_AUTH_LOGIN_ERROR_URL = "/login/"
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
+
+
+# Optional: User creation settings
+# SOCIAL_AUTH_USER_MODEL = "auth.User"
+# SOCIAL_AUTH_CREATE_USERS = True
+# SOCIAL_AUTH_UPDATE_LAST_LOGIN = True
+
+# Pipeline for user creation/updating
+# SOCIAL_AUTH_PIPELINE = (
+#     "social_core.pipeline.social_auth.social_details",
+#     "social_core.pipeline.social_auth.social_uid",
+#     "social_core.pipeline.social_auth.auth_allowed",
+#     "social_core.pipeline.social_auth.social_user",
+#     "social_core.pipeline.user.get_username",
+#     "social_core.pipeline.user.create_user",
+#     "social_core.pipeline.social_auth.associate_user",
+#     "social_core.pipeline.social_auth.load_extra_data",
+#     "social_core.pipeline.user.user_details",
+# )
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -171,7 +172,6 @@ AUTH_PASSWORD_VALIDATORS = [
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
