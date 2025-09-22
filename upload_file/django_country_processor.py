@@ -511,7 +511,7 @@ class DjangoCountryProcessor:
             df.to_csv(csv_path, index=False, encoding='utf-8-sig', sep=',')
 
             logger.info(f"✅ CSV processato salvato: {csv_path}")
-            logger.info(f"📊 Dati salvati: {len(df)} righe, {len(df.columns)} colonne")
+            # logger.info(f"📊 Dati salvati: {len(df)} righe, {len(df.columns)} colonne")
 
             # Ritorna il path relativo per salvarlo nel database
             relative_path = os.path.relpath(csv_path, settings.MEDIA_ROOT)

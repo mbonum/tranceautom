@@ -114,27 +114,27 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
 
 
 AUTHENTICATION_BACKENDS = [
-    "social_core.backends.okta.OktaOAuth2",  # Okta authentication
-    "django.contrib.auth.backends.ModelBackend",  # Standard Django auth
+    "social_core.backends.okta.OktaOAuth2",
+    "django.contrib.auth.backends.ModelBackend",
 ]
-# Client ID: 0oav1p8zuzd38tELD697
-# Client Secret: ZiUGPOxsQu9q2vAAEs1CzJyEF6ZpM9vkHvABdIHPb_Xxr47T45aGuD5Gw8NIZZ2j
-# Endpoint Discovery: https://calzedoniagroup.okta.com/.well-known/openid-configuration
+
+# https://python-social-auth.readthedocs.io/en/latest/configuration/django.html
 # Okta configuration
 SOCIAL_AUTH_OKTA_OAUTH2_KEY = env("OKTA_CLIENT_ID")
 SOCIAL_AUTH_OKTA_OAUTH2_SECRET = env("OKTA_CLIENT_SECRET")
 # The issuer URL often needs the authorization server path.
 # Verify this path in your Okta admin console under API > Authorization Servers. + "/oauth2/default"
-SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER")  # env("OKTA_ISSUER")
-SOCIAL_AUTH_REQUIRE_POST = False
-SOCIAL_AUTH_URL_NAMESPACE = "social"
-SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ["openid", "profile", "email"]
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = env("OKTA_ISSUER")
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
+# SOCIAL_AUTH_REQUIRE_POST = False
+
+# SOCIAL_AUTH_URL_NAMESPACE = "social"
+# SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ["openid", "profile", "email"]
 
 # Redirect URLs
-SOCIAL_AUTH_REDIRECT_URI = "http://localhost:8000/auth/complete/okta-oauth2/"
-SOCIAL_AUTH_LOGIN_REDIRECT_URL = "/"
-SOCIAL_AUTH_LOGIN_ERROR_URL = "/login/"
-SOCIAL_AUTH_JSONFIELD_ENABLED = True
+# SOCIAL_AUTH_REDIRECT_URI = "https://tranche-autom-hopp43txpa-ey.a.run.app/auth/complete/okta-oauth2/"  # localhost:8000
+# SOCIAL_AUTH_LOGIN_REDIRECT_URL = "/"
+# SOCIAL_AUTH_LOGIN_ERROR_URL = "/login/"
 
 
 # Optional: User creation settings
@@ -286,6 +286,10 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
             "propagate": False,
+        },
+        "social_auth": {
+            "handlers": ["console"],
+            "level": "DEBUG",
         },
     },
 }

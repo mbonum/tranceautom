@@ -247,6 +247,8 @@ class ModernTableView {
             html += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.next_page_number}"><i class="bi bi-chevron-right"></i></a></li>`;
             html += `<li class="page-item"><a class="page-link" href="#" data-page="${pagination.total_pages}"><i class="bi bi-chevron-double-right"></i></a></li>`;
         }
+
+        $nav.html(html); // This line was missing
     }
     
     updateVisibleCount() {

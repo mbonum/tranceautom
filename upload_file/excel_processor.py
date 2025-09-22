@@ -5,10 +5,10 @@ Converte Excel in CSV, pulisce i dati e estrae informazioni sui paesi
 """
 
 import pandas as pd
-import numpy as np
+# import numpy as np
 import re
-from datetime import datetime, date
-from typing import Dict, List, Set, Tuple, Optional, Any
+from datetime import datetime  # , date
+from typing import Dict, List, Tuple, Optional, Any  # , Set
 import logging
 import os
 
@@ -163,6 +163,11 @@ class ExcelProcessor:
             # Carica il CSV
             df = pd.read_csv(csv_file_path, header=None)
             logger.info(f"   Dimensioni originali: {df.shape}")
+
+            # Check if the first cell of the first row is empty, and if so, remove the row
+            if not df.empty and pd.isna(df.iloc[0, 0]):
+                # logger.info("First cell of the first row is empty. Removing the first row.")
+                df = df.iloc[1:].reset_index(drop=True)
 
             # Rileva il tipo di file
             file_type = self._detect_file_type(df)
@@ -749,7 +754,7 @@ class ExcelProcessor:
         Salva i dati processati in CSV
         """
         try:
-            logger.info(f"Salvataggio dati processati: {output_file}")
+            # logger.info(f"Salvataggio dati processati: {output_file}")
 
             # Converti in DataFrame
             df = pd.DataFrame(products_data)
@@ -757,7 +762,7 @@ class ExcelProcessor:
             # Salva come CSV
             df.to_csv(output_file, index=False)
 
-            logger.info(f"Dati salvati: {len(products_data)} prodotti")
+            # logger.info(f"Dati salvati: {len(products_data)} prodotti")
 
         except Exception as e:
             logger.error(f"Errore nel salvataggio: {e}")
@@ -819,7 +824,7 @@ class ExcelProcessor:
                 "prodotti_aap": len([p for p in products_data if p.get("paesi_aap")]),
             }
 
-            logger.info("Processamento completato!")
+            # logger.info("Processamento completato!")
             logger.info(f"   Statistiche: {stats}")
 
             return {

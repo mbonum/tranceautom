@@ -171,6 +171,21 @@ def data_view(request, import_id):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         from django.template.loader import render_to_string
 
+        # Handle single row refresh
+        if request.GET.get("single_row") and request.GET.get("product_id"):
+            try:
+                product_id = int(request.GET.get("product_id"))
+                product = prodotti_base.get(id=product_id)
+                return JsonResponse(
+                    {
+                        "html": render_to_string(
+                            "table_row.html", {"product": product}
+                        )
+                    }
+                )
+            except (ValueError, pianificazione.get_all_products().model.DoesNotExist):
+                return JsonResponse({"html": ""}, status=404)
+
         # Render product table rows HTML
         products_html = ""
         for product in prodotti:

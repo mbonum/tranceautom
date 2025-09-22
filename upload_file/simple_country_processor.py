@@ -1,11 +1,11 @@
 """
 Simple Country Processor - Clean and Final Solution
-Creates one final CSV with country columns and dates - no intermediate files
+Creates one final CSV with country columns and dates
 """
 
 import pandas as pd
 import os
-from typing import Optional
+# from typing import Optional
 import logging
 
 # Setup logging
@@ -184,7 +184,7 @@ def load_and_clean_excel_data(excel_file: str) -> pd.DataFrame:
         non_null_counts = df.notna().sum(axis=1)
         header_row = non_null_counts.idxmax()
 
-        logger.info(f"Header row identified at index: {header_row}")
+        # logger.info(f"Header row identified at index: {header_row}")
 
         # Use the header row as column names and take data from next row onwards
         if header_row > 0:
