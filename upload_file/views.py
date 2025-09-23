@@ -1,20 +1,19 @@
 """
-Refactored views for Tranche Automation
-Focused on API endpoints and user interface, with business logic delegated to specialized modules
+Simplified views for Tranche Automation
+Three pages: Login -> Upload -> Data Visualization
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
-from django.db import models  # transaction
+from django.db import models
 from django.conf import settings
+from django.http import JsonResponse
 import os
-# import json
 import logging
 
-from .models import PianificazioneImport, Prodotto  # , CountryGroup, PaesePianificazione
+from .models import PianificazioneImport  # , Prodotto
 from .forms import FileUploadForm
 from .django_country_processor import DjangoCountryProcessor
 
@@ -24,7 +23,7 @@ logger = logging.getLogger(__name__)
 @login_required
 def home(request):
     """
-    Pagina principale di upload semplificata
+    Main upload page
     """
     if request.method == "POST":
         return upload_file(request)
@@ -41,7 +40,7 @@ def home(request):
 @login_required
 def upload_file(request):
     """
-    Gestisce l'upload e processing dei file Excel
+    Handle Excel file upload and processing
     """
     if request.method != "POST":
         return redirect("home")
@@ -49,30 +48,26 @@ def upload_file(request):
     form = FileUploadForm(request.POST, request.FILES)
 
     if not form.is_valid():
-        logger.warning(
-            f"Form non valido per utente {request.user.username}: {form.errors}"
-        )
-        messages.error(
-            request, "File non valido. Assicurati di caricare un file Excel (.xlsx)"
-        )
+        logger.warning(f"Invalid form for user {request.user.username}: {form.errors}")
+        messages.error(request, "Invalid file. Please upload an Excel file (.xlsx)")
         return redirect("home")
 
     try:
         uploaded_file = form.cleaned_data["file"]
 
-        # Il file è già validato dal form Django
+        # File is already validated by Django form
         logger.info(
-            f"📁 Processing file: {uploaded_file.name} ({uploaded_file.size} bytes)"
+            f"Processing file: {uploaded_file.name} ({uploaded_file.size} bytes)"
         )
 
-        # Crea record di import
+        # Create import record
         import_record = PianificazioneImport.objects.create(
             source_file_name=uploaded_file.name,
             imported_by=request.user,
             status="pending",
         )
 
-        # Salva il file temporaneamente
+        # Save file temporarily
         temp_dir = os.path.join(settings.MEDIA_ROOT, "temp_uploads")
         os.makedirs(temp_dir, exist_ok=True)
 
@@ -84,31 +79,34 @@ def upload_file(request):
             for chunk in uploaded_file.chunks():
                 destination.write(chunk)
 
-        # Processa il file con il nuovo processore
+        # Process file with the new processor
         try:
             processor = DjangoCountryProcessor()
             stats = processor.process_excel_to_database(temp_file_path, import_record)
 
-            # Pulizia file temporaneo
+            # Clean up temporary file
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
             messages.success(
                 request,
-                f"File processato con successo! "
-                f"Prodotti: {stats['products_created']}, "
-                f"Record paesi: {stats['country_records_created']}",
+                f"File processed successfully! "
+                f"Products: {stats['products_created']}, "
+                f"Country records: {stats['country_records_created']}",
             )
 
             logger.info(
-                f"✅ Upload completato con successo! Redirect a planning_details per import {import_record.id}"
+                f"Upload completed successfully! Redirecting to data_view for import {import_record.id}"
             )
-            return redirect("planning_details", import_id=import_record.id)
+            return redirect("data_view", import_id=import_record.id)
 
         except Exception as e:
-            logger.error(f"Errore nel processing del file: {str(e)}")
+            logger.error(
+                f"Error processing file {uploaded_file.name} for import {import_record.id}: {e}",
+                exc_info=True,
+            )
 
-            # Pulizia in caso di errore
+            # Clean up on error
             if os.path.exists(temp_file_path):
                 os.remove(temp_file_path)
 
@@ -116,192 +114,146 @@ def upload_file(request):
             import_record.error_message = str(e)
             import_record.save()
 
-            messages.error(request, f"Errore nel processing del file: {str(e)}")
+            messages.error(request, f"Error processing file: {str(e)}")
             return redirect("home")
 
     except Exception as e:
-        logger.error(f"Errore generale nell'upload: {str(e)}")
-        messages.error(request, f"Errore nell'upload: {str(e)}")
+        logger.error(f"General upload error: {e}", exc_info=True)
+        messages.error(request, f"Upload error: {str(e)}")
         return redirect("home")
 
 
-# View planning_list rimossa - non necessaria per il flusso semplificato
-
-
-# Funzioni legacy rimosse - ora usiamo DjangoCountryProcessor
-
-
 @login_required
-def planning_details(request, import_id):
+def data_view(request, import_id):
     """
-    Mostra i dettagli di una pianificazione specifica
+    Modern data visualization with pagination and AJAX support
     """
     pianificazione = get_object_or_404(PianificazioneImport, id=import_id)
-    prodotti = pianificazione.get_all_products()
 
-    # Filtri
+    # Get all products with relations
+    prodotti_base = pianificazione.get_all_products().prefetch_related(
+        "paesi_pianificazione"
+    )
+
+    # Apply search filter
     search = request.GET.get("search", "")
-    country_filter = request.GET.get("country", "")
-
     if search:
-        prodotti = prodotti.filter(
+        prodotti_base = prodotti_base.filter(
             models.Q(chiave_articolo__icontains=search)
             | models.Q(descrizione__icontains=search)
             | models.Q(sku__icontains=search)
+            | models.Q(articolo__icontains=search)
+            | models.Q(fornitore__icontains=search)
+            | models.Q(colore__icontains=search)
         )
 
-    if country_filter:
-        prodotti = prodotti.filter(paesi_disponibili__contains=[country_filter.upper()])
+    # Apply additional filters
+    date_filter = request.GET.get("date-filter")
+    if date_filter == "no_delivery_date":
+        prodotti_base = prodotti_base.filter(data_inizio_consegna__isnull=True)
+    elif date_filter == "past_due":
+        from datetime import date
 
-    # Paginazione
-    paginator = Paginator(prodotti, 20)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
+        prodotti_base = prodotti_base.filter(data_inizio_consegna__lt=date.today())
 
-    # Statistiche
-    total_countries = len(set([p for prod in prodotti for p in prod.paesi_disponibili]))
-    products_with_dates = sum(1 for p in prodotti if p.paesi_con_date)
-    products_aap = sum(1 for p in prodotti if p.paesi_aap)
+    category_filter = request.GET.get("category-filter")
+    if category_filter:
+        prodotti_base = prodotti_base.filter(categorie__icontains=category_filter)
 
-    context = {
-        "pianificazione": pianificazione,
-        "page_obj": page_obj,
-        "search": search,
-        "country_filter": country_filter,
-        "stats": {
-            "total_products": prodotti.count(),
-            "total_countries": total_countries,
-            "products_with_dates": products_with_dates,
-            "products_aap": products_aap,
-        },
-    }
+    # Pagination
+    per_page = int(request.GET.get("per_page", 20))
+    page = int(request.GET.get("page", 1))
 
-    return render(request, "data_view.html", context)
+    paginator = Paginator(prodotti_base, per_page)
+    prodotti = paginator.get_page(page)
 
+    # For AJAX requests, return JSON data
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        from django.template.loader import render_to_string
 
-@login_required
-def product_detail(request, import_id, product_id):
-    """
-    Mostra i dettagli di un prodotto specifico
-    """
-    pianificazione = get_object_or_404(PianificazioneImport, id=import_id)
-    prodotto = get_object_or_404(Prodotto, id=product_id, pianificazione=pianificazione)
+        # Handle single row refresh
+        if request.GET.get("single_row") and request.GET.get("product_id"):
+            try:
+                product_id = int(request.GET.get("product_id"))
+                product = prodotti_base.get(id=product_id)
+                return JsonResponse(
+                    {
+                        "html": render_to_string(
+                            "table_row.html", {"product": product}
+                        )
+                    }
+                )
+            except (ValueError, pianificazione.get_all_products().model.DoesNotExist):
+                return JsonResponse({"html": ""}, status=404)
 
-    # Organizza i dati dei paesi
-    countries_data = {"with_dates": [], "aap": [], "all_available": []}
+        # Render product table rows HTML
+        products_html = ""
+        for product in prodotti:
+            products_html += render_to_string("table_row.html", {"product": product})
 
-    # Paesi con date specifiche
-    for country, date in prodotto.date_paesi.items():
-        countries_data["with_dates"].append({"code": country, "date": date})
-
-    # Paesi AAP
-    for country in prodotto.paesi_aap:
-        countries_data["aap"].append({"code": country, "date": "AAP"})
-
-    # Tutti i paesi disponibili
-    for country in prodotto.paesi_disponibili:
-        if country not in [
-            c["code"] for c in countries_data["with_dates"] + countries_data["aap"]
-        ]:
-            countries_data["all_available"].append(
-                {"code": country, "date": "Disponibile"}
-            )
-
-    context = {
-        "pianificazione": pianificazione,
-        "prodotto": prodotto,
-        "countries_data": countries_data,
-    }
-
-    return render(request, "upload_file/product_detail.html", context)
-
-
-@login_required
-def download_processed_file(request, import_id):
-    """
-    Scarica il file processato
-    """
-    pianificazione = get_object_or_404(PianificazioneImport, id=import_id)
-
-    if not pianificazione.processed_file_path or not os.path.exists(
-        pianificazione.processed_file_path
-    ):
-        messages.error(request, "File processato non trovato.")
-        return redirect("planning_details", import_id=import_id)
-
-    # Prepara il file per il download
-    with open(pianificazione.processed_file_path, "rb") as f:
-        response = HttpResponse(f.read(), content_type="text/csv")
-        response["Content-Disposition"] = (
-            f'attachment; filename="{pianificazione.source_file_name}_processed.csv"'
-        )
-        return response
-
-
-@login_required
-def api_products(request, import_id):
-    """
-    API per ottenere i prodotti di una pianificazione
-    """
-    pianificazione = get_object_or_404(PianificazioneImport, id=import_id)
-    prodotti = pianificazione.get_all_products()
-
-    # Filtri
-    search = request.GET.get("search", "")
-    if search:
-        prodotti = prodotti.filter(
-            models.Q(chiave_articolo__icontains=search)
-            | models.Q(descrizione__icontains=search)
-        )
-
-    # Converti in JSON
-    data = []
-    for prodotto in prodotti:
-        data.append(
+        return JsonResponse(
             {
-                "id": prodotto.id,
-                "chiave_articolo": prodotto.chiave_articolo,
-                "sku": prodotto.sku,
-                "descrizione": prodotto.descrizione,
-                "paesi_disponibili": prodotto.paesi_disponibili,
-                "paesi_con_date": len(prodotto.paesi_con_date),
-                "paesi_aap": len(prodotto.paesi_aap),
+                "html": products_html,
+                "products": [{"id": p.id, "name": p.chiave_articolo} for p in prodotti],
+                "pagination": {
+                    "current_page": page,
+                    "total_pages": paginator.num_pages,
+                    "has_next": prodotti.has_next(),
+                    "has_previous": prodotti.has_previous(),
+                    "next_page_number": prodotti.next_page_number()
+                    if prodotti.has_next()
+                    else None,
+                    "previous_page_number": prodotti.previous_page_number()
+                    if prodotti.has_previous()
+                    else None,
+                    "start": prodotti.start_index() if prodotti else 0,
+                    "end": prodotti.end_index() if prodotti else 0,
+                    "total": paginator.count,
+                },
             }
         )
 
-    return JsonResponse({"products": data})
+    # Regular page load
+    context = {
+        "pianificazione": pianificazione,
+        "prodotti": prodotti,
+        "search": search,
+        "total_products": paginator.count,
+        "current_page": page,
+        "per_page": per_page,
+    }
+
+    return render(request, "modern_table_view.html", context)
 
 
 @login_required
-def delete_planning(request, import_id):
+def download_xml(request, import_id):
     """
-    Elimina una pianificazione
+    Generate and download XML file for PIM integration
     """
     pianificazione = get_object_or_404(PianificazioneImport, id=import_id)
 
-    if request.method == "POST":
-        try:
-            # Elimina i file associati
-            if pianificazione.csv_file_path and os.path.exists(
-                pianificazione.csv_file_path
-            ):
-                os.remove(pianificazione.csv_file_path)
+    try:
+        from .xml_generator import XMLGenerator
 
-            if pianificazione.processed_file_path and os.path.exists(
-                pianificazione.processed_file_path
-            ):
-                os.remove(pianificazione.processed_file_path)
+        # Generate XML
+        xml_generator = XMLGenerator()
+        xml_content = xml_generator.generate_planning_xml(pianificazione)
 
-            # Elimina il record
-            pianificazione.delete()
+        # Prepare response for download
+        from django.http import HttpResponse
 
-            messages.success(request, "Pianificazione eliminata con successo.")
-            return redirect("home")
+        response = HttpResponse(xml_content, content_type="application/xml")
+        response["Content-Disposition"] = (
+            f'attachment; filename="pianificazione_{pianificazione.id}_{pianificazione.source_file_name.replace(".xlsx", "")}.xml"'
+        )
 
-        except Exception as e:
-            messages.error(request, f"Errore nell'eliminazione: {str(e)}")
-            return redirect("planning_details", import_id=import_id)
+        logger.info(
+            f"XML generated and downloaded for import {import_id} by user {request.user.username}"
+        )
+        return response
 
-    context = {"pianificazione": pianificazione}
-
-    return render(request, "upload_file/delete_planning.html", context)
+    except Exception as e:
+        logger.error(f"Error generating XML for import {import_id}: {str(e)}")
+        messages.error(request, f"Error generating XML: {str(e)}")
+        return redirect("data_view", import_id=import_id)

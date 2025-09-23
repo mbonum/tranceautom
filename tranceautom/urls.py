@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.http import JsonResponse
 from django.urls import include, path
-from upload_file.views_simple import (
+from upload_file.views import (
     home,
     # upload_file,
     data_view,
