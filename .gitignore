@@ -15,7 +15,7 @@ __pycache__/
 .Python
 
 # Django specific
-staticfiles/
+# staticfiles/
 media/
 db.sqlite3
 *.sqlite3
