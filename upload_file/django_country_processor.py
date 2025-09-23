@@ -14,7 +14,7 @@ from .simple_country_processor import (
     load_and_clean_excel_data,
     create_country_columns,
     get_countries_list,
-    analyze_final_data,
+    # analyze_final_data,
 )
 
 logger = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ class DjangoCountryProcessor:
                 "concatena_magazzino": [
                     "concatena 1 per MAGAZZINO",
                     "Concatena Magazzino",
-                    "concatena_magazzino"
+                    "concatena_magazzino",
                 ],
                 "serie": ["Serie", "serie"],
                 "merceologia": ["Merceologia", "merceologia"],
@@ -139,7 +139,7 @@ class DjangoCountryProcessor:
                 "descrizione": [
                     "Descrizione articolo",  # CORRETTO!
                     "Descrizione",
-                    "descrizione"
+                    "descrizione",
                 ],
                 "data_inizio_consegna": [
                     "DATA INIZIO CONSEGNA AI P.V. (ORIGINARIA)",  # CORRETTO!
@@ -159,12 +159,12 @@ class DjangoCountryProcessor:
                 "impianti_per": [
                     "IMPIANTI PER",  # CORRETTO!
                     "Impianti Per",
-                    "impianti_per"
+                    "impianti_per",
                 ],
                 "note_ufficio": [
                     "NOTE UFFICIO COMMERCIALE",  # CORRETTO!
                     "Note Ufficio",
-                    "note_ufficio"
+                    "note_ufficio",
                 ],
                 "categorie": ["CATEGORIE", "Categorie", "categorie"],  # CORRETTO!
                 "fornitore": ["FORNITORE", "Fornitore", "fornitore"],
@@ -175,7 +175,7 @@ class DjangoCountryProcessor:
                     "E-commerce Visibility",
                     "ecommerce_visibility",
                     "E-COMMERCE VISIBILITY",
-                    "ECOMMERCE VISIBILITY"
+                    "ECOMMERCE VISIBILITY",
                 ],
             }
 
@@ -497,8 +497,11 @@ class DjangoCountryProcessor:
         try:
             # Crea il nome del file con timestamp
             from datetime import datetime
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            base_name = import_record.source_file_name.replace('.xlsx', '').replace('.xls', '')
+            base_name = import_record.source_file_name.replace(".xlsx", "").replace(
+                ".xls", ""
+            )
             csv_filename = f"{base_name}_processed_{timestamp}.csv"
 
             # Path nella cartella media/temp_uploads
@@ -507,8 +510,15 @@ class DjangoCountryProcessor:
             # Assicurati che la directory esista
             os.makedirs(os.path.dirname(csv_path), exist_ok=True)
 
+            # Check if the first cell of the first row is empty, and if so, remove the row
+            if not df.empty and pd.isna(df.iloc[0, 0]):
+                logger.info(
+                    f"First cell of the first row is empty in the final CSV. Removing the first row before saving.{df.iloc[0, 0]}"
+                )
+                df = df.iloc[1:].reset_index(drop=True)
+
             # Salva il CSV
-            df.to_csv(csv_path, index=False, encoding='utf-8-sig', sep=',')
+            df.to_csv(csv_path, index=False, encoding="utf-8-sig", sep=",")
 
             logger.info(f"✅ CSV processato salvato: {csv_path}")
             # logger.info(f"📊 Dati salvati: {len(df)} righe, {len(df.columns)} colonne")
@@ -524,27 +534,30 @@ class DjangoCountryProcessor:
     def _apply_visibility_rules(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Applica le regole E-commerce Visibility per popolare automaticamente i paesi
-        
+
         Args:
             df (pd.DataFrame): DataFrame con i dati processati
-            
+
         Returns:
             pd.DataFrame: DataFrame con paesi popolati secondo le regole di visibilità
         """
         try:
-            from .visibility_rules import EcommerceVisibilityProcessor, apply_visibility_rules_to_products
-            
+            from .visibility_rules import (
+                EcommerceVisibilityProcessor,
+                apply_visibility_rules_to_products,
+            )
+
             logger.info("🔄 Applying E-commerce Visibility rules to products...")
-            
+
             # Crea il processore delle regole
             processor = EcommerceVisibilityProcessor()
-            
+
             # Applica le regole al DataFrame
             df_with_rules = apply_visibility_rules_to_products(df, processor)
-            
+
             logger.info("✅ E-commerce Visibility rules applied successfully")
             return df_with_rules
-            
+
         except Exception as e:
             logger.warning(f"⚠️ Failed to apply visibility rules: {str(e)}")
             logger.warning("Continuing without visibility rules application...")

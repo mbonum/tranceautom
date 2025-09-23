@@ -1,17 +1,3 @@
-# import psycopg2
-
-# try:
-#     conn = psycopg2.connect(
-#         host="localhost",
-#         port=5432,
-#         database="tranche_autom",
-#         user="tranche-autom-admin",
-#         password="5vnlfT4oUs9u1ZYkOT6gN%7",
-#     )
-#     print("✅ Direct connection successful!")
-#     conn.close()
-# except Exception as e:
-#     print(f"❌ Direct connection failed: {e}")
 import os
 import django
 from django.conf import settings

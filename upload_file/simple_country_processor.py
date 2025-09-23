@@ -346,7 +346,7 @@ def create_country_columns(df: pd.DataFrame) -> pd.DataFrame:
                     country_group_columns.append(col)
                     break
 
-        logger.info(f"Found country group columns: {country_group_columns}")
+        # logger.info(f"Found country group columns: {country_group_columns}")
 
         # Core product columns (everything except country group columns)
         core_columns = [col for col in df.columns if col not in country_group_columns]
