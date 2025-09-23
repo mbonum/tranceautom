@@ -53,6 +53,11 @@ class DjangoCountryProcessor:
 
             # Step 1: Load and clean Excel data
             df = load_and_clean_excel_data(excel_file_path)
+            # # Check if the first cell of the first row is empty, and if so, remove the row
+            if not df.empty and pd.isna(df.iloc[0, 0]) or df.iloc[0, 0] == "":
+                df = df.iloc[1:].reset_index(drop=True)
+                # df = df.drop(0).reset_index(drop=True)
+
             if df.empty:
                 raise ValueError(
                     "Unable to load data from Excel file: The DataFrame is empty after cleaning."
@@ -510,12 +515,10 @@ class DjangoCountryProcessor:
             # Assicurati che la directory esista
             os.makedirs(os.path.dirname(csv_path), exist_ok=True)
 
-            # Check if the first cell of the first row is empty, and if so, remove the row
-            if not df.empty and pd.isna(df.iloc[0, 0]):
-                logger.info(
-                    f"First cell of the first row is empty in the final CSV. Removing the first row before saving.{df.iloc[0, 0]}"
-                )
-                df = df.iloc[1:].reset_index(drop=True)
+            # # Check if the first cell of the first row is empty, and if so, remove the row
+            # if not df.empty and pd.isna(df.iloc[0, 0]) or df.iloc[0, 0] == "":
+            #     df = df.drop(0).reset_index(drop=True)
+            # df = df.iloc[1:].reset_index(drop=True)
 
             # Salva il CSV
             df.to_csv(csv_path, index=False, encoding="utf-8-sig", sep=",")
