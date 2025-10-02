@@ -52,10 +52,6 @@ class ModernTableView {
         // Country modal
         $(document).on('click', '.countries-more', this.openCountryModal.bind(this));
         $('#save-countries').on('click', this.saveCountries.bind(this));
-        $('#country-search').on('input', this.debounce(this.searchCountries.bind(this), 200));
-        $('#set-all-available').on('click', this.setAllCountries.bind(this, 'available'));
-        $('#set-all-aap').on('click', this.setAllCountries.bind(this, 'as_available'));
-        $('#clear-all').on('click', this.setAllCountries.bind(this, 'not_available'));
         
         // Bulk operations
         $('#apply-bulk-changes').on('click', this.applyBulkChanges.bind(this));
@@ -525,10 +521,22 @@ class ModernTableView {
         
         // Load country data for this product
         this.loadCountryData(productId);
+
+        // Unbind and rebind modal-specific events to avoid multiple bindings
+        $('#country-search').off('input').on('input', this.debounce(this.searchCountries.bind(this), 200));
+        $('#clear-search').off('click').on('click', () => {
+            $('#country-search').val('').trigger('input');
+        });
+        $('#set-all-available').off('click').on('click', this.setAllCountries.bind(this, 'available'));
+        $('#set-all-aap').off('click').on('click', this.setAllCountries.bind(this, 'as_available'));
+        $('#clear-all').off('click').on('click', this.setAllCountries.bind(this, 'not_available'));
+        $('[name="country-filter"]').off('change').on('change', this.filterCountries.bind(this));
+        $('#reset-country-filter').off('click').on('click', this.resetCountryFilters.bind(this));
+        $('#apply-visibility-rules, #auto-apply-rule').off('click').on('click', this.applyVisibilityRules.bind(this));
     }
     
     loadCountryData(productId) {
-        $('#country-modal').find('.modal-title').text(`Edit Countries for Product ${productId}`);
+        $('#country-modal').find('.modal-title').text(`Edit Countries for Product ${productId} `);
         $('#country-modal').data('product-id', productId);
         
         // Load country data via AJAX
@@ -604,7 +612,7 @@ class ModernTableView {
                                 <select class="form-select form-select-sm country-type mb-1" data-country="${code}">
                                     <option value="not_available" ${country.type === 'not_available' || !country.type ? 'selected' : ''}>❌ Not Available</option>
                                     <option value="available" ${country.type === 'available' ? 'selected' : ''}>✅ Available</option>
-                                    <option value="as_available" ${country.type === 'as_available' ? 'selected' : ''}>⏳ As Available (AAP)</option>
+                                    <option value="as_available" ${country.type === 'as_available' ? 'selected' : ''}>⏳ AAP</option>
                                     <option value="data_specifica" ${country.type === 'data_specifica' ? 'selected' : ''}>📅 Specific Date</option>
                                 </select>
                                 <input type="date" class="form-control form-control-sm country-date" 
@@ -614,7 +622,7 @@ class ModernTableView {
                             </div>
                         </div>
                     </div>
-                `;
+                `;// AAP As Available
             });
             
             $(`#${regionKey}-grid`).html(regionHtml);
@@ -663,13 +671,21 @@ class ModernTableView {
     }
     
     getCountryFlag(code) {
-        // Simple flag mapping - in a real app you might use a proper flag library
-        const flags = {
-            'IT': '🇮🇹', 'FR': '🇫🇷', 'DE': '🇩🇪', 'ES': '🇪🇸', 'GB': '🇬🇧', 'US': '🇺🇸',
-            'CH': '🇨🇭', 'AT': '🇦🇹', 'NL': '🇳🇱', 'BE': '🇧🇪', 'CN': '🇨🇳', 'JP': '🇯🇵',
-            'BR': '🇧🇷', 'RU': '🇷🇺', 'TR': '🇹🇷', 'GR': '🇬🇷', 'PL': '🇵🇱', 'PT': '🇵🇹'
+        // Use flag-icons library for cross-browser compatibility
+        let flagCode = code.toLowerCase();
+        const specialCases = {
+            'uk': 'gb', // Use 'gb' for United Kingdom
+            'fl': 'li'  // Use 'li' for Liechtenstein
         };
-        return flags[code] || '🌍';
+
+        if (specialCases[flagCode]) {
+            flagCode = specialCases[flagCode];
+        }
+
+        // Return an img tag pointing to the flag icon SVG
+        return `<img src="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.2.2/flags/4x3/${flagCode}.svg" 
+                     alt="${code}" 
+                     style="width: 1.33em; height: 1em; vertical-align: middle;">`;
     }
     
     updateCountryCounts() {
@@ -706,15 +722,41 @@ class ModernTableView {
     }
     
     setAllCountries(type) {
-        const visibleCountries = $('.country-grid-item:visible .country-type');
-        
-        visibleCountries.each(function() {
-            $(this).val(type).trigger('change');
-        });
-        
-        this.showSuccess(`Set ${visibleCountries.length} countries to ${type.replace('_', ' ')}`);
+        const $visibleCountries = $('.country-grid-item:visible .country-type');
+        $visibleCountries.val(type).trigger('change');
+        this.showSuccess(`Set ${$visibleCountries.length} countries to ${type.replace('_', ' ')}`);
     }
     
+    filterCountries(event) {
+        const filterValue = $(event.currentTarget).val();
+        $('#reset-country-filter').show();
+
+        $('.country-grid-item').each(function() {
+            const $item = $(this);
+            const countryType = $item.find('.country-type').val();
+            let show = false;
+
+            if (filterValue === 'available' && (countryType === 'available' || countryType === 'data_specifica')) {
+                show = true;
+            } else if (filterValue === 'not-available' && countryType === 'not_available') {
+                show = true;
+            } else if (filterValue === 'aap' && countryType === 'as_available') {
+                show = true;
+            }
+
+            $item.toggle(show);
+        });
+    }
+
+    resetCountryFilters() {
+        // Uncheck all radio buttons
+        $('[name="country-filter"]').prop('checked', false);
+        // Show all country items
+        $('.country-grid-item').show();
+        // Hide the reset button
+        $('#reset-country-filter').hide();
+    }
+
     saveCountries() {
         const productId = $('#country-modal').data('product-id');
         const countries = [];

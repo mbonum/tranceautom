@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ pianificazione.source_file_name }} - Table View{% endblock %}
+{% block title %}{{ pianificazione.source_file_name }} - Table{% endblock %}
 <!-- sticky-top -->
 {% block content %}
 <style>
@@ -235,6 +235,18 @@
     opacity: 0.5;
 }
 
+/* Top scrollbar styles */
+.top-scrollbar-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 20px; /* Height of the scrollbar */
+}
+
+.top-scrollbar-content {
+    height: 1px;
+    /* Width is set by JavaScript */
+}
+
 </style>
 <div class="modern-table-view bg-light">
     <div class="header-bar sticky-top bg-white border-bottom shadow-sm py-2">
@@ -305,7 +317,12 @@
                 <p class="mt-2 text-muted">Loading products...</p>
             </div>
             
-            <div class="table-wrapper overflow-x-auto bg-white rounded-3 shadow-sm">
+            <div class="bg-white rounded-3 shadow-sm">
+                <div class="top-scrollbar-wrapper" id="top-scrollbar">
+                    <div class="top-scrollbar-content"></div>
+                </div>
+
+                <div class="table-wrapper overflow-x-auto">
                 <table class="table table-hover table-sm m-0" id="products-table" style="table-layout: fixed;">
                     <thead class="table-dark sticky-top">
                         <tr>
@@ -316,12 +333,12 @@
                             <th width="120">Concatena Magazzino</th>
                             <th width="80">SKU</th>
                             <th width="100">Articolo</th>
-                            <th width="80">Colore</th>
+                            <th width="60">Colore</th>
                             <th width="60">Taglia</th>
                             <th width="250">Descrizione</th>
                             <th width="100">Serie</th>
                             <th width="80">Stagione</th>
-                            <th width="80">Tranche</th>
+                            <th width="40">Tranche</th>
                             <th width="120">Merceologia</th>
                             <th width="120">Data Consegna</th>
                             <th width="120">Data Spedizione</th>
@@ -330,7 +347,7 @@
                             <th width="100">Categorie</th>
                             <th width="150">E-commerce Visibility</th>
                             <th width="200">Paesi Disponibili</th>
-                            <th width="50">Actions</th>
+                            <!-- <th width="50">Actions</th> -->
                         </tr>
                     </thead>
                     <tbody id="products-tbody">
@@ -345,6 +362,7 @@
                     <h5 class="mt-3 text-muted">No products found</h5>
                     <p class="text-muted">Try adjusting your search criteria</p>
                 </div>
+            </div>
             </div>
         </div>
     </div>
@@ -465,6 +483,35 @@
 <script src="{% static 'js/column-resizer.js' %}"></script>
 <script src="{% static 'js/modern-table-view.js' %}"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const topScrollbar = document.getElementById('top-scrollbar');
+    const topScrollbarContent = topScrollbar.querySelector('.top-scrollbar-content');
+    const tableWrapper = document.querySelector('.table-wrapper');
+    const table = document.getElementById('products-table');
+
+    function syncScroll() {
+        // Set width of top scrollbar content to match table's scroll width
+        if (table) {
+            topScrollbarContent.style.width = table.scrollWidth + 'px';
+        }
+    }
+
+    // Sync on load and on window resize
+    syncScroll();
+    window.addEventListener('resize', syncScroll);
+
+    // Sync when top scrollbar is used
+    topScrollbar.addEventListener('scroll', function() {
+        tableWrapper.scrollLeft = topScrollbar.scrollLeft;
+    });
+
+    // Sync when main table scrollbar is used
+    tableWrapper.addEventListener('scroll', function() {
+        topScrollbar.scrollLeft = tableWrapper.scrollLeft;
+    });
+});
+
+
 document.addEventListener('DOMContentLoaded', function() {
     const downloadBtn = document.getElementById('download-xml-btn');
 
