@@ -1,7 +1,5 @@
 # Tranche Automation - Django Application
 
-TODO: Estrarre date colonna -
-
 ## Overview
 
 Tranche Automation is a Django web application designed to process Excel planning files containing product data and country-specific information. The application extracts, validates, and transforms this data into XML format for integration with PIM (Product Information Management) systems.
